@@ -6,6 +6,7 @@ from threading import Timer
 
 BEACON_MAX_DURATION = 66000 # ns
 TAG_MAX_DURATION = 52000 # ns
+PACKET_MAX_DURATION = 52000 # ns
 
 class EventType(Enum):
     UNKNOWN = 1
@@ -54,26 +55,31 @@ class TimeTracker(object):
     def __init__(self, onEdgeEvent):
         self.lastEdgeS = monotonic()
         self.onEdgeEvent = onEdgeEvent
+        self.count = 0
 
     def onLight(self):
         now = monotonic()
         diffNS = (now - self.lastEdgeS) * 1000000
         self.onEdgeEvent(InputDirection.TROUGH, diffNS)
         self.lastEdgeS = now
+        self.count = self.count + 1
+        print("   DROP: " + str(diffNS) + " COUNT: " + str(self.count))
 
     def onDark(self):
         now = monotonic()
         diffNS = (now - self.lastEdgeS) * 1000000
         self.onEdgeEvent(InputDirection.RISE, diffNS)
         self.lastEdgeS = now
+        print("   RISE: " + str(diffNS))
 
 
-class MessageStream(object):
+class MessageInputStream(object):
     def __init__(self, id):
         self.timeTracker = TimeTracker(self.onEdgeEvent)
 
         self.id = id
         self.stream = []
+        print("STARTING LISTENER ON GPIO: " + str(id)) 
 
         self.button = Button(id)
         self.button.when_pressed = self.timeTracker.onLight
@@ -95,8 +101,35 @@ class MessageStream(object):
         return result 
 
 
+    def parsePacket(self):
+        if (len(self.stream) < 17):
+            return
+
+        # All messages must start with START
+        if (self.stream[0] != EventType.START):
+            print('corrupt start')
+            return
+
+        # All messages need PREAMBLE
+        if (self.stream[1] != EventType.PREAMBLE):
+            print('corrupt preamble')
+            return
+
+        # Message neither a BEACON or TAG
+        if (self.stream[2] != EventType.START):
+            print('corrupt tag');
+            return
+
+        packetType = self.parseBits(3,16)
+        print("PACKET - TYPE %(packetType)d" % {"packetType": packetType})
+
     def parseTag(self):
         if (len(self.stream) < 17):
+            return
+
+        if (len(self.stream) > 17):
+            messageTimer = Timer(PACKET_MAX_DURATION * 0.000001, self.parsePacket)
+            messageTimer.start()
             return
 
         # All messages must start with START
@@ -203,5 +236,5 @@ class MessageStream(object):
         #    })
 
 
-stream = MessageStream(2)
+stream = MessageInputStream(2)
 pause()
