@@ -1,8 +1,13 @@
-from tagit import MessageInputStream, MessageBuilder 
+from tagit import MessageInputStream
 from signal import pause 
 
-stream = MessageInputStream(2)
-stream.start()
+def onPacket(message):
+    print("GOT MESSAGE: " + str(message[0]))
+
+inputStream = MessageInputStream(2, {
+    'onPacket': onPacket
+})
+inputStream.start()
 
 pause()
 
