@@ -1,6 +1,7 @@
 from tagit import MessageInputStream, MessageBuilder , MessageOutputStream
 from signal import pause 
 from time import sleep
+from threading import Timer
 from gpiozero import Button
 
 class Host(object):
@@ -18,6 +19,7 @@ class Host(object):
         self.inputStream.start()
 
     def onMessage(self, message):
+        print("GOT MESSAGE: " + str(message[0]))
         if (message[0] == 0x10):
             taggerId = message[2]
             team = self.players % 2
@@ -29,13 +31,19 @@ class Host(object):
             self.players = self.players + 1
 
     def beginGame(self):
+        print("STARTING GAME!!!")
+        timer = Timer(1, self.startGame)
+        timer.start()
+
+
+    def startGame(self):
         print("TOTAL PLAYERS: " + str(self.players))
-        print("GAME START!!!!")
         self.gameStatus = 'RUNNING'
 
         # Start Countdown
         for count in range(10, -1, -1):
-            sleep(1);
+            sleep(1)
+            print(count)
             message = MessageBuilder().packet(0x0)\
                 .gameId(self.gameId)\
                 .data()\
@@ -47,6 +55,16 @@ class Host(object):
                 .data()\
                 .number8bit(0)\
                 .checksum()\
+                .toMessage()
+            self.outputStream.send(message)
+
+        while(True):
+            sleep(0.5)
+            print("ZONE BEACON")
+            message = MessageBuilder().beacon()\
+                .team(0)\
+                .zero()\
+                .number2bit(3)\
                 .toMessage()
             self.outputStream.send(message)
 
@@ -66,19 +84,19 @@ class Host(object):
         message = MessageBuilder().packet(0x3)\
             .gameId(self.gameId)\
             .data()\
-            .numberDbit(5)\
+            .numberDbit(1)\
             .data()\
-            .numberDbit(2)\
+            .numberDbit(1)\
             .data()\
-            .numberDbit(10)\
-            .data()\
-            .numberDbit(99)\
+            .numberDbit(3)\
             .data()\
             .numberDbit(0)\
             .data()\
-            .number8bit(0)\
+            .numberDbit(0)\
             .data()\
-            .number8bit(2)\
+            .number8bit(64)\
+            .data()\
+            .number8bit(74)\
             .checksum()\
             .toMessage()
 

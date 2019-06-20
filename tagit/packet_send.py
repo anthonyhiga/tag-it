@@ -1,4 +1,4 @@
-from bus import MessageBuilder 
+from .bus import MessageBuilder 
 
 ########################################################################
 #
@@ -24,7 +24,7 @@ def genCountdown(gameId, count, team1Count, team2Count, team3Count):
 #  Generate Game Announcement Message
 #
 ########################################################################
-def genAnnounceGame(gameType, gameId, gameLengthInMin, health, reloads, sheilds, megatags, totalTeams, options = []):
+def genAnnounceGame(gameType, gameId, gameLengthInMin, health, reloads, shields, megatags, totalTeams, options = []):
     type = 0x2
     if (gameType == "CUSTOM"):
         type = 0x2

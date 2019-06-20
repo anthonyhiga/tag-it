@@ -1,4 +1,4 @@
-from tagit import MessageOutputStream, MessageBuilder 
+from bus import MessageOutputStream, MessageBuilder 
 from time import sleep
 
 stream = MessageOutputStream(3)

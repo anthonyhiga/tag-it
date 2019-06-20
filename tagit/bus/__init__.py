@@ -106,6 +106,7 @@ class TimeTracker(object):
 #
 class MessageInputStream(object):
     def __init__(self, id, handlers):
+        print("STARTING RECEIVER ON GPIO: " + str(id))
         self.timeTracker = TimeTracker(self.onEdgeEvent)
 
         self.handlers = handlers
