@@ -13,6 +13,7 @@
     "apollo-server": "^2.6.3",
     "apollo-server-express": "^2.6.3",
     "graphql": "^14.3.1",
+    "javascript-state-machine": "^3.1.0",
     "morgan": "^1.9.1",
     "sequelize": "^5.8.9",
     "sequelize-cli": "^5.5.0",

@@ -1,8 +1,8 @@
-node_modules/.bin/sequelize model:create --name Player --attributes id:string,email:string,password:string
-node_modules/.bin/sequelize model:create --name TeamMember --attributes id:string,email:string,password:string
-node_modules/.bin/sequelize model:create --name Team --attributes name:string,email:string,password:string
+node_modules/.bin/sequelize model:create --name Player --attributes name:string,totemId:string,birthYear:integer,photo:text
+node_modules/.bin/sequelize model:create --name TeamMember --attributes playerId:integer,teamId:integer,gameId:integer,taggerId:integer 
+node_modules/.bin/sequelize model:create --name Team --attributes gameId:integer,teamId:integer,name:string,logo:string
 
-node_modules/.bin/sequelize model:create --name Gun --attributes name:string,email:string,password:string
+node_modules/.bin/sequelize model:create --name ArbiterChannel --attributes id:string,arbiterId:string,name:string,type:string,totemId:string,status:string
 
 
 node_modules/.bin/sequelize model:create --name GameTeam --attributes id:integer,gameId:integer,ltGameId:integer,ltPlayerId:integer,ltTeamId:integer,createdAt:date,updatedAt:date

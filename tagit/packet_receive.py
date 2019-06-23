@@ -60,34 +60,29 @@ def BCDtoD(byte):
 def decodeTagReport(message):
     index = 4
     validPlayers = message[3]
-    hits = {}
+    tags = [0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(0, 8):
         if (validPlayers & (1 << i) > 0):
-            hits[i] = message[index] 
+            tags[i] = message[index] 
             index = index + 1
         else:
-            hits[i] = 0
+            tags[i] = 0
 
-    team1 = {}
-    team2 = {}
-    team3 = {}
+    tagTeamId = 0
     if (message[0] == MessageType.GROUP_1_DEBRIEF_DATA.value): 
-        team1 = hits
+        tagTeamId = 1
     elif (message[0] == MessageType.GROUP_2_DEBRIEF_DATA.value): 
-        team2 = hits
+        tagTeamId = 2 
     elif (message[0] == MessageType.GROUP_3_DEBRIEF_DATA.value): 
-        team3 = hits
+        tagTeamId = 3
 
     return {
         'type': MessageType(message[0]),
         'gameId': message[1],
         'teamId': message[2] >> 4,
         'playerId': message[2] & 0xF,
-        'hits': {
-            'team1': team1,
-            'team2': team2,
-            'team3': team3,
-        },
+        'tagTeamId': tagTeamId,
+        'tags': tags,
     }
 
 def decodeMessage(message):
@@ -108,11 +103,11 @@ def decodeMessage(message):
     elif (type == MessageType.BASIC_DEBRIEF_DATA.value):
         followUpReports = []
         if (message[8] & 0x2):
-            followUpReports.push('team1')
+            followUpReports.append(1)
         if (message[8] & 0x4):
-            followUpReports.push('team2')
+            followUpReports.append(2)
         if (message[8] & 0x8):
-            followUpReports.push('team3')
+            followUpReports.append(3)
 
         return {
           'type': MessageType(message[0]),

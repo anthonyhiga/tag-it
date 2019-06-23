@@ -1,4 +1,4 @@
-import sys 
+import sys, traceback
 from network import getSocket, serialNumber
 from signal import pause 
 from time import sleep
@@ -30,9 +30,8 @@ def markCommandComplete(id):
         del commandHistory[id]
 
     except:
-        type, value, traceback = sys.exc_info()
-        print('Error opening %s: %s' % (value.filename, value.strerror))
-        print("ERROR: Unable to register arbiter with overmind")
+        print("ERROR: Unable talk to overmind")
+        print("Unexpected error:", sys.exc_info()[0])
 
 def markCommandFailed(id):
     try:
@@ -49,9 +48,8 @@ def markCommandFailed(id):
         del commandHistory[id]
 
     except:
-        type, value, traceback = sys.exc_info()
-        print('Error opening %s: %s' % (value.filename, value.strerror))
-        print("ERROR: Unable to register arbiter with overmind")
+        print("ERROR: Unable talk to overmind")
+        print("Unexpected error:", sys.exc_info()[0])
 
 def markCommandRunning(id):
     try:
@@ -67,9 +65,8 @@ def markCommandRunning(id):
         ws.query(query, variables={'id': id})
 
     except:
-        type, value, traceback = sys.exc_info()
-        print('Error opening %s: %s' % (value.filename, value.strerror))
-        print("ERROR: Unable to register arbiter with overmind")
+        print("ERROR: Unable talk to overmind")
+        print("Unexpected error:", sys.exc_info()[0])
 
 
 def subscribeCommands(runCommand):
@@ -93,12 +90,15 @@ def subscribeCommands(runCommand):
             print("COMMAND DONE: " + str(id))
             markCommandComplete(id)
           except:
+            print("COMMAND FAILED: " + str(id))
+            print("Unexpected error:", sys.exc_info()[0])
+            traceback.print_tb(sys.exc_info()[2])
             markCommandFailed(id)
 
+
       except:
-        type, value, traceback = sys.exc_info()
-        print('Error opening %s: %s' % (value.filename, value.strerror))
         print("ERROR: Unable to register arbiter with overmind")
+        print("Unexpected error:", sys.exc_info()[0])
 
 
     def monitor():
@@ -130,9 +130,7 @@ def subscribeCommands(runCommand):
             sleep(1)
 
         except:
-          type, value, traceback = sys.exc_info()
-          print('Error opening %s: %s' % (value.filename, value.strerror))
-          print("ERROR: Unable to register arbiter with overmind")
+          print("ERROR: Unable to talk with overmind")
 
         # retry every 20 seconds
         sleep(10)

@@ -1,10 +1,13 @@
 const { gql, PubSub, withFilter} = require('apollo-server');
-const {ArbiterSettings} = require("./models");
+const { makeExecutableSchema } = require('graphql-tools');
+const {ArbiterSettings, ArbiterChannel} = require("./models");
 
 const ARBITER_SETTINGS_UPDATED = 'ARBITER_SETTINGS_UPDATED';
 const ARBITER_ACTIVE_COMMANDS_UPDATED = 'ARBITER_ACTIVE_COMMANDS_UPDATED';
+const ARBITER_CHANNEL_UPDATED = 'ARBITER_CHANNEL_UPDATED';
 
 // We build a command cache, because we don't want these to be persistent
+const channelCache = [];
 const commandCache = [];
 
 function genId() {
@@ -19,6 +22,10 @@ function findActiveCommands(id) {
       && command.arbiterId === id);
 }
 
+function findChannel(id) {
+  return channelCache.find((channel) => (channel.id === id));
+}
+
 /*
  * Boot up persistence layer
  */
@@ -27,17 +34,43 @@ const initialize = (db) => {
   sequelize = db;
 }
 
+const handlers = {};
+const addHandler = (id, name, method) => {
+  handlers[name] = method;
+}
+
 // Private PUBSUB for Arbiters
 const pubsub = new PubSub();
 
 // Type definitions define the "shape" of your data and specify
 // which ways the data can be fetched from the GraphQL server.
 const typeDefs = gql`
+  enum ArbiterChannelType {
+    AREA 
+    HOLSTER 
+    TARGET 
+  }
+
+  enum ArbiterChannelStatus {
+    PRESENT
+    SERVED
+    ABSENT
+  }
+
   enum ArbiterCommandStatus {
     START 
     RUNNING 
     COMPLETE 
     FAILED 
+  }
+
+  type ArbiterChannel {
+    id: ID!
+    name: ID!
+    arbiterId: ID!
+    type: ArbiterChannelType!
+    status: ArbiterChannelStatus!
+    totemId: ID
   }
 
   type ArbiterCommand {
@@ -77,6 +110,9 @@ const typeDefs = gql`
   }
 
   type Mutation {
+    update_arbiter_channel(arbiterId: ID!, name: String!, type: ArbiterChannelType,
+      status: ArbiterChannelStatus, totemId: ID): ArbiterChannel
+
     register_arbiter_settings(id: ID!): ArbiterSettings
     update_arbiter_settings(settings: UpdateArbiterSettings): ArbiterSettings 
 
@@ -99,6 +135,36 @@ const resolvers = {
   },
 
   Mutation: {
+    update_arbiter_channel: async (root, args, context) => {
+      const id = args.arbiterId + ":" + args.name;
+      let currentChannel = findChannel(id);
+      if (currentChannel == null) {
+      //  console.log("ADDING NEW CHANNEL: " + id);
+        currentChannel = {
+          id: id,
+          arbiterId: args.arbiterId,
+          name: args.name,
+        };
+        channelCache.push(currentChannel);
+      } else {
+      //  console.log("UPDATING CHANNEL: " + id + " TOTEM: " + args.totemId);
+      }
+
+      currentChannel.type = args.type;
+      currentChannel.status = args.status;
+      currentChannel.totemId = args.totemId;
+      console.log(currentChannel);
+
+      pubsub.publish(ARBITER_CHANNEL_UPDATED, {
+        arbiter_channel_updated: currentChannel 
+      });
+
+      if (handlers.onChannelUpdated) {
+        handlers.onChannelUpdated(currentChannel);
+      }
+
+      return currentChannel;
+    },
     register_arbiter_settings: async (root, args, context) => {
       const settings = await ArbiterSettings
         .findOrCreate({
@@ -182,8 +248,6 @@ const resolvers = {
       subscribe: withFilter(
         () => pubsub.asyncIterator(ARBITER_SETTINGS_UPDATED),
         (payload, variables) => {
-          console.log(variables);
-          console.log(payload);
           return payload.arbiter_settings_updated.id === variables.id;
         }
       )
@@ -192,9 +256,6 @@ const resolvers = {
       subscribe: withFilter(
         () => pubsub.asyncIterator(ARBITER_ACTIVE_COMMANDS_UPDATED),
         (payload, variables) => {
-          console.log("SUB DATA: ");
-          console.log(variables);
-          console.log(payload);
           return payload.arbiterId === variables.id;
         }
       )
@@ -202,8 +263,52 @@ const resolvers = {
   },
 };
 
+const broadcastArbiterCommand = (message) => {
+  ArbiterSettings.findAll().then(arbiters => {
+    arbiters.forEach((arbiter) => {
+      console.log("BROADCAST TO: " + arbiter.id);
+      console.log(message);
+      sendArbiterCommand(arbiter.id, message);
+    });
+  });
+};
+
+const sendArbiterCommand = (arbiterId, message) => {
+  const command = {
+    id: genId(),
+    arbiterId: arbiterId,
+    status: 'START',
+    message: JSON.stringify(message),
+  }
+  commandCache.push(command);
+
+  pubsub.publish(ARBITER_ACTIVE_COMMANDS_UPDATED, {
+    arbiterId: command.arbiterId,
+    arbiter_active_commands: findActiveCommands(arbiterId) 
+  });
+
+  return command;
+}
+
+const updateChannelState = (id, state) => {
+  const channel = findChannel(id);
+  if (channel != null) {
+    channel.state = state;
+  }
+}; 
+
+const schema = makeExecutableSchema({
+  typeDefs: typeDefs,
+  resolvers: resolvers,
+});
+
 module.exports = {
+  addHandler,
+  sendArbiterCommand,
+  broadcastArbiterCommand,
+  updateChannelState,
   initialize,
   typeDefs,
   resolvers,
+  schema,
 };

@@ -15,6 +15,33 @@ def callback(_id, data):
   print(id)
   print(data)
 
+def updateChannel(name, totemId, status, type):
+    try:
+        ws = getSocket()
+        query = """
+        mutation update_arbiter_channel($arbiterId: ID!, $name: String!,
+          $type: ArbiterChannelType, $status: ArbiterChannelStatus, $totemId: ID) {
+          update_arbiter_channel(arbiterId: $arbiterId, name: $name, type: $type,
+            status: $status, totemId: $totemId) {
+            id
+          }
+        }
+        """
+        
+        result = ws.query(query, variables={
+            'arbiterId': serialNumber,
+            'name': name,
+            'totemId': totemId,
+            'status': status,
+            'type': type,
+            } )
+        print(result)
+    except:
+        type, value, traceback = sys.exc_info()
+        print('Error opening %s: %s' % (value.filename, value.strerror))
+        print("ERROR: Unable to update channel with overmind")
+
+
 def registerArbiter():
     try:
         ws = getSocket()
@@ -54,8 +81,3 @@ def subscribeSettings():
         print('Error opening %s: %s' % (value.filename, value.strerror))
         print("ERROR: Unable to register arbiter with overmind")
 
-
-registerArbiter()
-subscribeSettings()
-
-pause()

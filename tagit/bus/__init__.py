@@ -6,6 +6,7 @@
 #  Common Reference Structures for Tag-It
 #
 #############################################################################
+import sys, traceback
 from enum import Enum
 from time import sleep, monotonic
 from queue import Queue
@@ -216,8 +217,10 @@ class MessageInputStream(object):
             try:
                 if (checkSum == packetCheckSum):
                     self.handlers['onPacket'](self.message)
-            except AttributeError:
-                print("ERROR: No handler installed for packets")
+            except:
+                print("Unexpected error:", sys.exc_info()[0])
+                traceback.print_tb(sys.exc_info()[2])
+
 
 
     def parseTag(self):
@@ -245,13 +248,14 @@ class MessageInputStream(object):
         team = self.parse2bit()
         player = self.parse3bit()
         strength = self.parse2bit()
-        print("TAG - STRENGTH %(strength)d TEAM: %(team)d PLAYER: %(player)d" % 
-          {"strength": strength, "player": player, "team": team})
+        #print("TAG - STRENGTH %(strength)d TEAM: %(team)d PLAYER: %(player)d" % 
+        #  {"strength": strength, "player": player, "team": team})
 
         try:
-            self.handlers.onTag(team, player, strength)
-        except AttributeError:
-            print("ERROR: No handler installed for tags")
+            self.handlers['onTag'](team, player, strength)
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
+            traceback.print_tb(sys.exc_info()[2])
 
     def parseBeacon(self):
         if (len(self.stream) < 13):
@@ -279,9 +283,9 @@ class MessageInputStream(object):
                 life = self.parse2bit()
                 team = self.parse2bit()
                 player = self.parse3bit()
-                print("ENHANCED BEACON - TAG: %(tag)d SHEILD %(shield)d LIFE: %(life)d TEAM: %(team)d PLAYER %(player)d" % 
-                    {"tag": tag, "shield": shield, "life": life, "team": team, "player": player})
-                self.handlers.onAdvancedBeacon(team, player, tag, shield, life)
+                #print("ENHANCED BEACON - TAG: %(tag)d SHEILD %(shield)d LIFE: %(life)d TEAM: %(team)d PLAYER %(player)d" % 
+                #    {"tag": tag, "shield": shield, "life": life, "team": team, "player": player})
+                self.handlers['onAdvancedBeacon'](team, player, tag, shield, life)
             else:
                 team = self.parse2bit()
                 tag = self.parse1bit()
@@ -296,16 +300,17 @@ class MessageInputStream(object):
                     zone = False
 
                 if (zone):
-                    print("ZONE BEACON - TAG: %(tag)d TYPE %(flex)d TEAM: %(team)d" % 
-                        {"tag": tag, "flex": flex, "team": team})
-                    self.handlers.onZoneBeacon(team, tag, flex)
+                    #print("ZONE BEACON - TAG: %(tag)d TYPE %(flex)d TEAM: %(team)d" % 
+                    #    {"tag": tag, "flex": flex, "team": team})
+                    self.handlers['onZoneBeacon'](team, tag, flex)
                 else:
-                    print("STANDARD BEACON - TAG: %(tag)d STRENGTH %(flex)d TEAM: %(team)d" % 
-                        {"tag": tag, "flex": flex, "team": team})
-                    self.handlers.onStandardBeacon(team, tag)
+                    #print("STANDARD BEACON - TAG: %(tag)d STRENGTH %(flex)d TEAM: %(team)d" % 
+                    #    {"tag": tag, "flex": flex, "team": team})
+                    self.handlers['onStandardBeacon'](team, tag)
 
-        except AttributeError:
-            print("ERROR: No handler installed for beacons")
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
+            traceback.print_tb(sys.exc_info()[2])
 
     def parseMessage(self):
         if (len(self.stream) < 13):
@@ -450,15 +455,15 @@ class MessageBuilder(object):
         return result
 
     def checksum(self):
-        checksum = self.checktotal | 256 & 0x1FF
+        checksum = (self.checktotal | 0x100) & 0x1FF
         return self.data().numberXbit(9, checksum).end()
 
     def gameId(self, id):
         return self.number8bit(id)
 
     def numberXbit(self, size, number):
-        if (number >= 2 ** size): 
-            raise Exception('number cannot be larger than or equal to ' + str(2 ** size))
+        if (number >= 1 << size): 
+            raise Exception(str(number) + ' cannot be larger than or equal to ' + str(2 << size))
 
         bits = []
         while(number != 0):

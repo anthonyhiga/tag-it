@@ -1,4 +1,6 @@
 from .bus import MessageBuilder 
+import sys 
+import traceback
 
 ########################################################################
 #
@@ -98,9 +100,9 @@ def genAnnounceGame(gameType, gameId, gameLengthInMin, health, reloads, shields,
             .data()\
             .numberDbit(megatags)\
             .data()\
-            .number8bit(64)\
+            .number8bit(flag1)\
             .data()\
-            .number8bit(74)\
+            .number8bit(flag2)\
             .checksum()\
             .toMessage()
 

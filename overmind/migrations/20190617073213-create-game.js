@@ -8,25 +8,22 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      id: {
-        type: Sequelize.INTEGER
+      status: {
+        allowNull: false,
+        type: Sequelize.ENUM,
+        values: ['SETUP', 'REGISTRATION', 'RUNNING', 'SCORING', 'COMPLETE']
       },
       ltId: {
+        allowNull: false,
         type: Sequelize.INTEGER
       },
       name: {
         type: Sequelize.STRING
       },
-      createdAt: {
-        type: Sequelize.DATE
-      },
       startedAt: {
         type: Sequelize.DATE
       },
       completedAt: {
-        type: Sequelize.DATE
-      },
-      updatedAt: {
         type: Sequelize.DATE
       },
       createdAt: {
