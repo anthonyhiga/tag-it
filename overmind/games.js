@@ -281,7 +281,7 @@ const resolvers = {
   Mutation: {
     file_basic_tag_report: async (root, args, context) => {
       console.warn('GOT BASIC REPORT');
-      console.warn(args.report)
+      //console.warn(args.report)
       // DO SOMETHING W/ THE REPORT
 
       const key = reportItemKey(args.report);
@@ -325,7 +325,7 @@ const resolvers = {
       console.warn('GOT TAG REPORT');
       // DO SOMETHING W/ THE REPORT
       
-      console.warn(args.report)
+      //console.warn(args.report)
       const report = args.report;
 
       const key = reportItemKey(report);
@@ -335,7 +335,16 @@ const resolvers = {
       if (item) {
         item.status = 'COMPLETE'
       } else {
-        console.warn('RECEIVED UNSOLICITED REPORT: ' + key);
+        console.warn('RECEIVED EARLY REPORT: ' + key);
+        reportCheckListCache[key] = {
+          gameId: args.report.gameId,
+          ltGameId: args.report.ltGameId,
+          ltTeamId: args.report.ltTeamId,
+          ltPlayerId: args.report.ltPlayerId,
+          ltTagTeamId: args.report.ltTagTeamId,
+          type: 'TEAM',
+          status: 'COMPLETE'
+        };
       }
 
       pubsub.publish(REPORT_CHECKLIST_UPDATED, {
