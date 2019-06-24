@@ -23,6 +23,7 @@ def subscribeReportCheckList(updateList):
           query = """
           subscription {
             report_check_list {
+              gameId
               ltGameId
               ltTeamId
               ltPlayerId

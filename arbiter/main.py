@@ -23,21 +23,24 @@ def onTotemUpdated(name, type, totemId):
 def onPlayerAdded(id, totemId):
     joinedPlayer(id, totemId)
 
-def onBasicReport(report):
+def onBasicReport(gameId, report):
     zoneTime = report['zoneTimeSec'] + report['zoneTimeMin'] * 60;
     survivedTime = report['survivedTimeSec'] + report['survivedTimeMin'] * 60;
 
     fileBasicReport({
+        'gameId': gameId,
         'ltGameId': report['gameId'],
         'ltTeamId': report['teamId'],
         'ltPlayerId': report['playerId'],
         'zoneTimeSec': zoneTime,
         'survivedTimeSec': survivedTime,
         'tagsReceived': report['tagsReceived'],
+        'followUpReports': report['followUpReports'],
     })
 
-def onTeamReport(report):
+def onTeamReport(gameId, report):
     fileTeamReport({
+        'gameId': gameId,
         'ltGameId': report['gameId'],
         'ltTeamId': report['teamId'],
         'ltPlayerId': report['playerId'],
@@ -89,8 +92,6 @@ def runCommand(raw):
         )
 
 def updateList(checkList):
-    print("GOT NEW REPORT LIST")
-    print(checkList)
     channel = channels['main']
     channel.requestTagReports(checkList) 
 

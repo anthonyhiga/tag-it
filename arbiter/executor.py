@@ -119,12 +119,14 @@ class Executor(object):
                 self.addPlayerFailedCount = 6 
 
             if (type == MessageType.BASIC_DEBRIEF_DATA):
-                self.handlers['onBasicReport'](message);
+                print("BASIC REPORT RECEIVED: " + str(message['teamId']) + ":" + str(message['playerId']))
+                self.handlers['onBasicReport'](self.currentGameId, message);
 
             if (type == MessageType.GROUP_1_DEBRIEF_DATA or \
                     type == MessageType.GROUP_2_DEBRIEF_DATA or \
                     type == MessageType.GROUP_3_DEBRIEF_DATA):
-                self.handlers['onTeamReport'](message);
+                print("TEAM REPORT RECEIVED: " + str(message['teamId']) + ":" + str(message['playerId']))
+                self.handlers['onTeamReport'](self.currentGameId, message)
 
     def requestTagReports(self, checkList):
       self.reportCheckList = checkList;
@@ -152,6 +154,7 @@ class Executor(object):
             if item['status'] == 'COMPLETE':
               continue
 
+            self.currentGameId = item['gameId']
             key = getBaseKey(item)
             if not key in queryList:
               queryList.append(item)

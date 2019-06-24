@@ -8,6 +8,7 @@ const arbiters = require('./arbiters.js');
 const games = require('./games.js');
 
 const DEFAULT_GAME_SETTINGS = {
+  reportTimeLimitSec: 180,
   reportDelaySec: 1,
   countDownSec: 6,
   gameLengthInMin: 1, // five minute game
@@ -37,6 +38,7 @@ class BaseState {
   onRegistrationStart(id) { console.warn('UNABLE TO START REGISTRATION'); }
   onPlayerJoined(id, totemId) { console.warn('UNABLE ADD PLAYER TO GAME'); }
   onScoringStarted() { console.warn('UNABLE SCORE GAME'); }
+  onFinalScore() { console.warn('UNABLE USE FINAL SCORE'); }
 }
 
 class IdleState extends BaseState {
@@ -73,6 +75,11 @@ class RegistrationState extends BaseState {
   }
 
   onGameStart(id) {
+    if (Object.keys(this.fsm.players).length <= 0) {
+      console.log("THERE ARE NO PLAYERS, NOT STARTING");
+      return;
+    }
+
     console.warn('STARTING GAME');
     const teams = this.fsm.teams;
 
@@ -183,12 +190,18 @@ class ScoringState extends BaseState {
     const teams = this.fsm.teams;
     console.log("SCORING GAME NOW");
     const players = Object.entries(this.fsm.players).map((player) => ({
+      gameId: this.fsm.game.id,
       ltGameId: this.fsm.game.ltId,
       ltTeamId: player[1].teamId,
       ltPlayerId: player[1].playerId,
     }))
 
-    games.scoreGame(players);
+    games.scoreGame(players,
+      this.fsm.settings.reportTimeLimitSec * 1000);
+  }
+
+  onFinalScore() {
+    this.fsm.complete();
   }
 }
 
@@ -236,6 +249,7 @@ function buildStateMachine() {
         'running': new RunningState(),
         'scoring': new ScoringState(),
         'complete': new BaseState(),
+        'destroy': new BaseState(),
       }
     },
     methods: {
@@ -272,6 +286,10 @@ function buildStateMachine() {
         games.addHandler(this.id, 'onPlayerJoined', (id, totemId) => {
           this.getState().onPlayerJoined(id, totemId);
         })
+      },
+      onFinalScore: function() {
+        console.warn('SCORING GAME');
+        this.getState().onFinalScore();
       },
       onScore: function() {
         console.warn('SCORING GAME');

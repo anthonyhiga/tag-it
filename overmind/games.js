@@ -1,9 +1,10 @@
 const { gql, PubSub, withFilter} = require('apollo-server');
 const { makeExecutableSchema } = require('graphql-tools');
-const {Game} = require("./models");
+const {Game, GamePlayerScore} = require("./models");
 
 const GAMES_UPDATED = 'GAMES_UPDATED';
 const REPORT_CHECKLIST_UPDATED = 'REPORT_CHECKLIST_UPDATED';
+const GAME_SCORE_UPDATED = 'GAME_SCORE_UPDATED';
 
 function genId() {
   min = Math.ceil(0);
@@ -12,7 +13,10 @@ function genId() {
 }
 
 // Report Items
-const reportCheckListCache = [];
+let scoringTimer = null;
+let reportCheckListCache = {};
+let reportBasicScoreCache = {};
+let reportTeamScoreCache = {};
 
 /*
  * Boot up persistence layer
@@ -31,7 +35,8 @@ const addHandler = (id, name, method) => {
 const pubsub = new PubSub();
 
 const reportItemKey = (item) => {
-  return item.ltGameId + ":"
+  return item.gameId + ":"
+    + item.ltGameId + ":"
     + item.ltTeamId + ":"
     + item.ltPlayerId + ":"
     + (item.ltTagTeamId == null ? "" : item.ltTagTeamId);
@@ -41,16 +46,98 @@ const getReportItemList = () => {
   return Object.keys(reportCheckListCache).sort().map((key) => reportCheckListCache[key]);
 }
 
-const scoreGame = (reportItems) => {
+const finalizeScore = () => {
+  if(scoringTimer) {
+    clearTimeout(scoringTimer);
+    scoringTimer = null;
+  }
+
+  const ltTagsGiven = {};
+
+  // For now we'll skip doing ultra detailed who shot who reports
+  for (const key in reportTeamScoreCache) {
+    const value = reportTeamScoreCache[key];
+    const teamId = value.ltTagTeamId;
+    value.tags.forEach((tags, playerId) => {
+      const id = teamId + ":" + playerId; 
+      if (ltTagsGiven[id] == null) {
+        ltTagsGiven[id] = 0;
+      }
+      ltTagsGiven[id] += tags;
+    });
+  }
+
+  let gameId = null;
+  const finalScore = [];
+  const created = [];
+  for (const key in reportBasicScoreCache) {
+    const value = reportBasicScoreCache[key];
+    const id = value.ltTeamId + ":" + value.ltPlayerId;
+    gameId = value.gameId;
+    const score = {
+      gameId: value.gameId,
+      ltGameId: value.ltGameId,
+      ltTeamId: value.ltTeamId,
+      ltPlayerId: value.ltPlayerId,
+      zoneTimeSec: value.zoneTimeSec,
+      survivedTimeSec: value.survivedTimeSec,
+      totalTagsReceived: value.tagsReceived,
+      totalTagsGiven: ltTagsGiven[id] || 0,
+    };
+    finalScore.push(score);
+    created.push(GamePlayerScore.create(score)); 
+  }
+
+  Promise.all(created).then(() => {
+    console.info("FINISHED RECORDING SCORES");
+    GamePlayerScore.findAll({
+      where: {gameId: gameId}
+    }).then((scores) => {
+      console.info("PUBLISHING SCORES");
+      pubsub.publish(GAME_SCORE_UPDATED, {
+        game_id: gameId,
+        game_score: scores, 
+      });
+    });
+  });
+
+  if (handlers.onFinalScore) {
+    handlers.onFinalScore(finalScore);
+  }
+}
+
+const checkAndFinalizeScore = () => {
+  // We'll trigger this every time we get a report
+  // if done, we'll finish up.  If not, we'll exit
   for (const key in reportCheckListCache){
     if (reportCheckListCache.hasOwnProperty(key)){
-      delete reportCheckListCache[key];
+      if (reportCheckListCache[key].status !== 'COMPLETE') {
+        return;
+      }
     }
   }
+
+  finalizeScore();
+}
+
+/*
+ * We will need to refactor this later to support
+ * multiple games simultaneously later.
+ */
+const scoreGame = (reportItems, timeLimitMs) => {
+  scoringTimer = setTimeout(() => {
+    console.warn("REACHED TIMEOUT, TALLYING SCORE ANYWAY");
+    finalizeScore(); 
+  }, timeLimitMs);
+
+  reportCheckListCache = {};
+  reportBasicScoreCache = {};
+  reportTeamScoreCache = {};
 
   reportItems.forEach((item) => {
     const key = reportItemKey(item);
     reportCheckListCache[key] = {
+      gameId: item.gameId,
       ltGameId: item.ltGameId,
       ltTeamId: item.ltTeamId,
       ltPlayerId: item.ltPlayerId,
@@ -65,8 +152,6 @@ const scoreGame = (reportItems) => {
   });
 };
 
-const addBasicReport = (report) => {
-};
 
 // Type definitions define the "shape" of your data and specify
 // which ways the data can be fetched from the GraphQL server.
@@ -91,7 +176,8 @@ input GameSettings {
 }
 
 input TeamTagReport {
-  ltGameId: ID!
+    gameId: ID!
+    ltGameId: ID!
     ltTeamId: ID!
     ltPlayerId: ID!
     ltTagTeamId: ID!
@@ -99,7 +185,8 @@ input TeamTagReport {
 }
 
 input BasicTagReport {
-  ltGameId: ID!
+    gameId: ID!
+    ltGameId: ID!
     ltTeamId: ID!
     ltPlayerId: ID!
     zoneTimeSec: Int!
@@ -119,6 +206,7 @@ enum ReportStatusType {
 }
 
 type ReportCheckListItem {
+  gameId: ID!
   ltGameId: ID!
   ltTeamId: ID!
   ltPlayerId: ID!
@@ -138,12 +226,28 @@ type Player {
   id: ID!
 }
 
+type GamePlayerScore {
+  id: ID!
+  gameId: ID!
+  teamId: ID
+  playerId: ID
+  totalTagsReceived: Int!
+  totalTagsGiven: Int!
+  survivedTimeSec: Int!
+  zoneTimeSec: Int!
+  ltGameId: ID!
+  ltTeamId: ID!
+  ltPlayerId: ID!
+}
+
 type Query {
+  game_score(id: ID!): [GamePlayerScore]
   games_list: [Game]
   game(id: ID!): Game
 }
 
 type Subscription {
+  game_score(id: ID!): [GamePlayerScore]
   report_check_list: [ReportCheckListItem]
   games_list: [Game]
 }
@@ -152,7 +256,6 @@ type Mutation {
   file_basic_tag_report(report: BasicTagReport!): Game
   file_team_tag_report(report: TeamTagReport!): Game
   joined_player(id: ID!, totemId: ID): Player!
-    score_game(id: ID!): Game
   create_game(name: String): Game
   update_game_settings(id: ID!, settings: GameSettings!): Game
   start_game(id: ID!): Game
@@ -162,6 +265,11 @@ type Mutation {
 
 const resolvers = {
   Query: {
+    game_score: async (root, args, context) => {
+      return await GamePlayerScore.findAll({
+        where: {gameId: args.id}
+      });
+    },
     games_list: async (root, args, context) => {
       return await Game.findAll();
     },
@@ -172,13 +280,13 @@ const resolvers = {
 
   Mutation: {
     file_basic_tag_report: async (root, args, context) => {
-      const game = await Game.findByPk(args.id);
       console.warn('GOT BASIC REPORT');
       console.warn(args.report)
       // DO SOMETHING W/ THE REPORT
 
       const key = reportItemKey(args.report);
-      const followUpReports = args.report.followUpReports;
+      const followUpReports = args.report.followUpReports || [];
+      reportBasicScoreCache[key] = args.report;
 
       item = reportCheckListCache[key];
       if (reportCheckListCache[key]) {
@@ -192,6 +300,7 @@ const resolvers = {
           console.warn('ADDING FOLLOW UP: ' + followUpKey);
           if (reportCheckListCache[followUpKey] == null) {
             reportCheckListCache[followUpKey] = {
+              gameId: args.report.gameId,
               ltGameId: args.report.ltGameId,
               ltTeamId: args.report.ltTeamId,
               ltPlayerId: args.report.ltPlayerId,
@@ -208,7 +317,9 @@ const resolvers = {
       } else {
         console.warn('RECEIVED UNSOLICITED REPORT: ' + key);
       }
-      return game;
+
+      checkAndFinalizeScore();
+      return null;
     },
     file_team_tag_report: async (root, args, context) => {
       console.warn('GOT TAG REPORT');
@@ -218,6 +329,8 @@ const resolvers = {
       const report = args.report;
 
       const key = reportItemKey(report);
+      reportTeamScoreCache[key] = args.report;
+
       item = reportCheckListCache[key];
       if (item) {
         item.status = 'COMPLETE'
@@ -228,22 +341,9 @@ const resolvers = {
       pubsub.publish(REPORT_CHECKLIST_UPDATED, {
         report_check_list: getReportItemList()
       });
-    },
-    score_game: async (root, args, context) => {
-      const game = await Game.findByPk(args.id);
-      scoreGame([
-        {
-          ltGameId: 1,
-          ltTeamId: 1,
-          ltPlayerId: 0,
-        },
-        {
-          ltGameId: 1,
-          ltTeamId: 2,
-          ltPlayerId: 0,
-        }
-      ]);
-      return game;
+
+      checkAndFinalizeScore();
+      return null;
     },
     create_game: async (root, args, context) => {
       const game = await Game.create({
@@ -286,6 +386,14 @@ const resolvers = {
   },
 
   Subscription: {
+    game_score: {
+      subscribe: withFilter(
+        () => pubsub.asyncIterator(GAME_SCORE_UPDATED),
+        (payload, variables) => {
+          return payload.game_id === variables.id;
+        }
+      )
+    },
     report_check_list: {
       subscribe: () => pubsub.asyncIterator([REPORT_CHECKLIST_UPDATED])
     },

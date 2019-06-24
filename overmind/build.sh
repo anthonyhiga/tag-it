@@ -11,3 +11,5 @@ node_modules/.bin/sequelize model:create --name Game --attributes id:integer,ltI
 
 node_modules/.bin/sequelize model:create --name ArbiterCommand --attributes id:integer,status:integer,message:string,response:string,arbiterId:string,createdAt:date,updatedAt:date
 
+node_modules/.bin/sequelize model:create --name GamePlayerScore --attributes id:integer,gameId:integer,teamId:integer,playerId:integer,totalTagsReceived:integer,totalTagsGiven:integer,survivedTimeSec:integer,zoneTimeSec:integer
+node_modules/.bin/sequelize model:create --name GamePlayerScoreTagRecord --attributes id:integer,gameId:integer,teamId:integer,playerId:integer,tagsReceived:integer,tagsGiven:integer,tagTeamId:integer,tagPlayerId:integer
