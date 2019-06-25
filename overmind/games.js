@@ -1,7 +1,14 @@
+/*
+ *
+ * Game Infrastructure
+ *
+ */
 const { gql, PubSub, withFilter} = require('apollo-server');
 const { makeExecutableSchema } = require('graphql-tools');
 const {Game, GamePlayerScore} = require("./models");
+const Sequelize = require('sequelize');
 
+const Op = Sequelize.Op;
 const GAMES_UPDATED = 'GAMES_UPDATED';
 const REPORT_CHECKLIST_UPDATED = 'REPORT_CHECKLIST_UPDATED';
 const GAME_SCORE_UPDATED = 'GAME_SCORE_UPDATED';
@@ -24,12 +31,22 @@ let reportTeamScoreCache = {};
 let sequelize = null;
 const initialize = (db) => {
   sequelize = db;
-}
+};
 
-const handlers = {};
+const gameMachineCache = {}; 
+const gameMachineBuilderCache = {}; 
+const registerGameMachine = (machineBuilder) => {
+  gameMachineBuilderCache[machineBuilder.type] = machineBuilder;
+};
+
+let handlers = {};
 const addHandler = (id, name, method) => {
   handlers[name] = method;
 }
+
+const removeHandlers = (id) => {
+  handlers = {};
+};
 
 // Private PUBSUB for Arbiters
 const pubsub = new PubSub();
@@ -46,6 +63,44 @@ const getReportItemList = () => {
   return Object.keys(reportCheckListCache).sort().map((key) => reportCheckListCache[key]);
 }
 
+const cleanUpOldGames = () => {
+  Game.findAll({where: {
+    status: {
+      [Op.ne]: 'COMPLETE'
+    }
+  }}).then((games) => {
+    games.forEach((game) => {
+      game.status = 'COMPLETE';
+      game.save();
+    });
+  });
+}
+
+const updateGameState = (id, status) => {
+  return Game.findByPk(id).then(game => {
+    if (game != null) {
+      game.status = status;
+      return game.save();
+    }
+
+    return game;
+  }).then(() => {
+      return Promise.all([
+        Game.findAll(),
+        Game.findAll({where: {
+          status: {
+            [Op.ne]: 'COMPLETE'
+          }
+        }})
+      ]).then((results) => {
+        pubsub.publish(GAMES_UPDATED, {
+          games_list: results[0],
+          active_games_list: results[1], 
+        });
+      });
+  });
+};
+
 const finalizeScore = () => {
   if(scoringTimer) {
     clearTimeout(scoringTimer);
@@ -59,7 +114,7 @@ const finalizeScore = () => {
     const value = reportTeamScoreCache[key];
     const teamId = value.ltTagTeamId;
     value.tags.forEach((tags, playerId) => {
-      const id = teamId + ":" + playerId; 
+      const id = teamId + ":" + playerId;
       if (ltTagsGiven[id] == null) {
         ltTagsGiven[id] = 0;
       }
@@ -85,25 +140,28 @@ const finalizeScore = () => {
       totalTagsGiven: ltTagsGiven[id] || 0,
     };
     finalScore.push(score);
-    created.push(GamePlayerScore.create(score)); 
+    created.push(GamePlayerScore.create(score));
   }
 
   Promise.all(created).then(() => {
     console.info("FINISHED RECORDING SCORES");
     GamePlayerScore.findAll({
-      where: {gameId: gameId}
+      where: { gameId: gameId }
     }).then((scores) => {
       console.info("PUBLISHING SCORES");
       pubsub.publish(GAME_SCORE_UPDATED, {
         game_id: gameId,
-        game_score: scores, 
+        game_score: scores,
       });
+
+      if (handlers.onFinalScore) {
+        handlers.onFinalScore(finalScore);
+
+        console.log("CLEARING GAME MACHINE");
+        delete gameMachineCache[gameId];
+      }
     });
   });
-
-  if (handlers.onFinalScore) {
-    handlers.onFinalScore(finalScore);
-  }
 }
 
 const checkAndFinalizeScore = () => {
@@ -127,7 +185,7 @@ const checkAndFinalizeScore = () => {
 const scoreGame = (reportItems, timeLimitMs) => {
   scoringTimer = setTimeout(() => {
     console.warn("REACHED TIMEOUT, TALLYING SCORE ANYWAY");
-    finalizeScore(); 
+    finalizeScore();
   }, timeLimitMs);
 
   reportCheckListCache = {};
@@ -176,7 +234,7 @@ input GameSettings {
 }
 
 input TeamTagReport {
-    gameId: ID!
+  gameId: ID!
     ltGameId: ID!
     ltTeamId: ID!
     ltPlayerId: ID!
@@ -185,7 +243,7 @@ input TeamTagReport {
 }
 
 input BasicTagReport {
-    gameId: ID!
+  gameId: ID!
     ltGameId: ID!
     ltTeamId: ID!
     ltPlayerId: ID!
@@ -207,12 +265,18 @@ enum ReportStatusType {
 
 type ReportCheckListItem {
   gameId: ID!
-  ltGameId: ID!
-  ltTeamId: ID!
-  ltPlayerId: ID!
-  ltTagTeamId: ID
+    ltGameId: ID!
+    ltTeamId: ID!
+    ltPlayerId: ID!
+    ltTagTeamId: ID
   type: ReportType!
-  status: ReportStatusType!
+    status: ReportStatusType!
+}
+
+type GameType {
+  name: String!
+  type: String!
+  description: String!
 }
 
 type Game {
@@ -228,35 +292,40 @@ type Player {
 
 type GamePlayerScore {
   id: ID!
-  gameId: ID!
-  teamId: ID
+    gameId: ID!
+    teamId: ID
   playerId: ID
   totalTagsReceived: Int!
-  totalTagsGiven: Int!
-  survivedTimeSec: Int!
-  zoneTimeSec: Int!
-  ltGameId: ID!
-  ltTeamId: ID!
-  ltPlayerId: ID!
+    totalTagsGiven: Int!
+    survivedTimeSec: Int!
+    zoneTimeSec: Int!
+    ltGameId: ID!
+    ltTeamId: ID!
+    ltPlayerId: ID!
 }
 
 type Query {
+  game_types_list: [GameType]
   game_score(id: ID!): [GamePlayerScore]
   games_list: [Game]
   game(id: ID!): Game
+  active_games_list: [Game]
 }
 
 type Subscription {
   game_score(id: ID!): [GamePlayerScore]
   report_check_list: [ReportCheckListItem]
   games_list: [Game]
+  active_games_list: [Game]
 }
 
 type Mutation {
   file_basic_tag_report(report: BasicTagReport!): Game
   file_team_tag_report(report: TeamTagReport!): Game
   joined_player(id: ID!, totemId: ID): Player!
-  create_game(name: String): Game
+
+  create_game(type: String!, name: String): Game
+
   update_game_settings(id: ID!, settings: GameSettings!): Game
   start_game(id: ID!): Game
   start_registration(id: ID!): Game
@@ -265,6 +334,16 @@ type Mutation {
 
 const resolvers = {
   Query: {
+    game_types_list: async (root, args, context) => {
+      return Object.keys(gameMachineBuilderCache).map((key) => {
+        const value = gameMachineBuilderCache[key];
+        return {
+          type: key,
+          description: value.description, 
+          name: value.name,
+        };
+      });
+    },
     game_score: async (root, args, context) => {
       return await GamePlayerScore.findAll({
         where: {gameId: args.id}
@@ -273,6 +352,13 @@ const resolvers = {
     games_list: async (root, args, context) => {
       return await Game.findAll();
     },
+    active_games_list: async (root, args, context) => {
+      return await Game.findAll({where: {
+        status: {
+          [Op.ne]: 'COMPLETE'
+        }
+      }});
+    },
     game: async (root, args, context) => {
       return await Game.findByPk(args.id);
     },
@@ -280,6 +366,7 @@ const resolvers = {
 
   Mutation: {
     file_basic_tag_report: async (root, args, context) => {
+      // This is coming from the arbiter 
       console.warn('GOT BASIC REPORT');
       //console.warn(args.report)
       // DO SOMETHING W/ THE REPORT
@@ -322,9 +409,10 @@ const resolvers = {
       return null;
     },
     file_team_tag_report: async (root, args, context) => {
+      // This is coming from the arbiter 
       console.warn('GOT TAG REPORT');
       // DO SOMETHING W/ THE REPORT
-      
+
       //console.warn(args.report)
       const report = args.report;
 
@@ -355,38 +443,66 @@ const resolvers = {
       return null;
     },
     create_game: async (root, args, context) => {
+      // This is coming from a client
+      if (gameMachineBuilderCache[args.type] == null) {
+        console.warn("NO MACHINE REGISTERED FOR TYPE: " + args.type);
+        return null;
+      }
+
       const game = await Game.create({
         'status': 'SETUP',
         'ltId': genId(),
         'name': args.name || 'Game On!',
       });
 
-      if (handlers.onGameCreated) {
-        handlers.onGameCreated(game);
-      }
+      const machine = gameMachineBuilderCache[args.type].build(game);
+      gameMachineCache[game.id] = machine;
+
+      Promise.all([
+        Game.findAll(),
+        Game.findAll({where: {
+          status: {
+            [Op.ne]: 'COMPLETE'
+          }
+        }})
+      ]).then((results) => {
+        pubsub.publish(GAMES_UPDATED, {
+          games_list: results[0],
+          active_games_list: results[1], 
+        });
+      });
 
       return game;
     },
     update_game_settings: async (root, args, context) => {
-      const game = await Game.findByPk(args.id);
-      if (handlers.onGameSettingsUpdate) {
-        handlers.onGameSettingsUpdate(args.id, args.settings);
+      // This is coming from a client
+      if (gameMachineCache[args.id]) {
+        gameMachineCache[args.id].updateSettings(args.settings);
+      } else {
+        console.warn("CANNOT UPDATE GAME SETTINGS: " + args.id);
       }
-      return game;
+      return await Game.findByPk(args.id);
     },
     start_game: async (root, args, context) => {
-      const game = await Game.findByPk(args.id);
-      if (handlers.onGameStart) {
-        handlers.onGameStart(args.id);
+      // This is coming from a client
+      if (gameMachineCache[args.id]) {
+        gameMachineCache[args.id].startGame();
+      } else {
+        console.warn("CANNOT START GAME: " + args.id);
       }
-      return game;
+      return await Game.findByPk(args.id);
     },
     start_registration: async (root, args, context) => {
-      if (handlers.onRegistrationStart) {
-        handlers.onRegistrationStart(args.id);
+      // This is coming from a client
+      if (gameMachineCache[args.id]) {
+        gameMachineCache[args.id].startRegistration();
+      } else {
+        console.warn("CANNOT START REGISTRATION FOR GAME: " + args.id);
       }
+      return await Game.findByPk(args.id);
     },
     joined_player: async (root, args, context) => {
+      // This is coming from the arbiter
       if (handlers.onPlayerJoined) {
         handlers.onPlayerJoined(args.id, args.totemId);
       }
@@ -407,12 +523,10 @@ const resolvers = {
       subscribe: () => pubsub.asyncIterator([REPORT_CHECKLIST_UPDATED])
     },
     games_list: {
-      subscribe: withFilter(
-        () => pubsub.asyncIterator(GAMES_UPDATED),
-        (payload, variables) => {
-          return payload.arbiter_settings_updated.id === variables.id;
-        }
-      )
+      subscribe: () => pubsub.asyncIterator([GAMES_UPDATED])
+    },
+    active_games_list: {
+      subscribe: () => pubsub.asyncIterator([GAMES_UPDATED])
     },
   },
 };
@@ -423,8 +537,12 @@ const schema = makeExecutableSchema({
 });
 
 module.exports = {
+  cleanUpOldGames,
+  registerGameMachine,
+  updateGameState,
   scoreGame,
   addHandler,
+  removeHandlers,
   initialize,
   typeDefs,
   resolvers,

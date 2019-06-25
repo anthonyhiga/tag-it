@@ -31,28 +31,23 @@ class BaseState {
     this.fsm = machine;
   }
 
-  onGameSettingsUpdate(id, settings) { console.warn('UNABLE TO CHANGE GAME SETTINGS'); }
-  onGameCreated(game) { console.warn('UNABLE TO CREATE NEW GAME'); }
-  onGameStart(id) { console.warn('UNABLE TO START GAME'); }
+  onGameSettingsUpdate(settings) { console.warn('UNABLE TO CHANGE GAME SETTINGS'); }
+  onGameStart() { console.warn('UNABLE TO START GAME'); }
   onChannelUpdated(channel) { console.warn('UNABLE TO PROCESS CHANNEL UPDATE'); }
-  onRegistrationStart(id) { console.warn('UNABLE TO START REGISTRATION'); }
+  onRegistrationStart() { console.warn('UNABLE TO START REGISTRATION'); }
   onPlayerJoined(id, totemId) { console.warn('UNABLE ADD PLAYER TO GAME'); }
   onScoringStarted() { console.warn('UNABLE SCORE GAME'); }
   onFinalScore() { console.warn('UNABLE USE FINAL SCORE'); }
 }
 
 class IdleState extends BaseState {
-  onGameCreated(game) {
-    this.fsm.game = game;
-    this.fsm.setup();
-  }
 }
 
 class SetupState extends BaseState {
-  onRegistrationStart(id) {
+  onRegistrationStart() {
     this.fsm.register();
   }
-  onGameSettingsUpdate(id, settings) {
+  onGameSettingsUpdate(settings) {
     console.log("UPDATED SETTINGS: ");
     console.log(settings);
     this.fsm.settings = {
@@ -74,7 +69,7 @@ class RegistrationState extends BaseState {
     }
   }
 
-  onGameStart(id) {
+  onGameStart() {
     if (Object.keys(this.fsm.players).length <= 0) {
       console.log("THERE ARE NO PLAYERS, NOT STARTING");
       return;
@@ -102,7 +97,6 @@ class RegistrationState extends BaseState {
       team3Count: teams[3].count,
       countDownSec: this.fsm.settings.countDownSec,
     });
-    console.warn('STARTING GAME DONE');
   }
 
   createPlayer() {
@@ -187,8 +181,9 @@ class RunningState extends BaseState {
 
 class ScoringState extends BaseState {
   onScoringStarted() {
+    games.updateGameState(this.fsm.game.id, 'SCORING'); 
+
     const teams = this.fsm.teams;
-    console.log("SCORING GAME NOW");
     const players = Object.entries(this.fsm.players).map((player) => ({
       gameId: this.fsm.game.id,
       ltGameId: this.fsm.game.ltId,
@@ -200,23 +195,23 @@ class ScoringState extends BaseState {
       this.fsm.settings.reportTimeLimitSec * 1000);
   }
 
-  onFinalScore() {
-    this.fsm.complete();
+  onFinalScore(id, finalScore) {
+    this.fsm.finish();
   }
 }
 
-function buildStateMachine() {
+function buildStateMachine(game) {
   const fsm = new StateMachine({
     init: 'idle',
     transitions: [
-      { name: 'setup', from: 'idle', to: 'setup' },
+      { name: 'configure', from: 'idle', to: 'setup' },
       { name: 'register', from: 'setup', to: 'registration' },
       { name: 'start', from: 'registration', to: 'running' },
       { name: 'score', from: 'running', to: 'scoring' },
-      { name: 'complete', from: 'scoring', to: 'complete' }, 
-      { name: 'destroy', from: 'complete', to: 'destroy' },
+      { name: 'finish', from: 'scoring', to: 'complete' }, 
     ],
     data: {
+      game: game,
       id: genId(),
       gameTimer: null,
       settings: {
@@ -249,17 +244,22 @@ function buildStateMachine() {
         'running': new RunningState(),
         'scoring': new ScoringState(),
         'complete': new BaseState(),
-        'destroy': new BaseState(),
       }
     },
     methods: {
+      startRegistration: function() {
+        this.getState().onRegistrationStart();
+      },
+      startGame: function() {
+        this.getState().onGameStart();
+      },
+      updateSettings: function(settings) {
+        this.getState().onGameSettingsUpdate(settings);
+      },
       getState: function() {
         const state = this.states[this.state];
         state.setStateMachine(this);
         return state;
-      },
-      onSetup: function(args) {
-        console.warn('SETTING UP GAME');
       },
       onInit: function() {
         console.warn('BOOTING UP GAME ENGINE');
@@ -267,47 +267,49 @@ function buildStateMachine() {
           this.getState().onChannelUpdated(channel);
         })
 
-        games.addHandler(this.id, 'onGameCreated', (game) => {
-          this.getState().onGameCreated(game);
-        })
-
-        games.addHandler(this.id, 'onGameSettingsUpdate', (id, settings) => {
-          this.getState().onGameSettingsUpdate(id, settings);
-        })
-
-        games.addHandler(this.id, 'onGameStart', (id) => {
-          this.getState().onGameStart(id);
-        })
-
-        games.addHandler(this.id, 'onRegistrationStart', (id) => {
-          this.getState().onRegistrationStart(id);
-        })
-
         games.addHandler(this.id, 'onPlayerJoined', (id, totemId) => {
           this.getState().onPlayerJoined(id, totemId);
         })
+
+        games.addHandler(this.id, 'onFinalScore', (id, finalScore) => {
+          this.getState().onFinalScore(id, finalScore);
+        })
       },
-      onFinalScore: function() {
-        console.warn('SCORING GAME');
-        this.getState().onFinalScore();
+      onSetup: function(args) {
+        console.warn('SETTING UP GAME');
+      },
+      onRegister: function() {
+        games.updateGameState(this.game.id, 'REGISTRATION'); 
+        console.warn('REGISTERING PLAYERS');
+      },
+      onStart: function() {
+        console.warn('RUNNING GAME');
+        games.updateGameState(this.game.id, 'RUNNING'); 
       },
       onScore: function() {
         console.warn('SCORING GAME');
         this.getState().onScoringStarted();
       },
-      onRegister: function() {
-        console.warn('REGISTERING PLAYERS');
-      },
-      onDestroy: function() {
-        console.warn("GAME COMPLETE, RELEASING RESOURCES");
+      onComplete: function() {
+        console.warn('GAME COMPLETE');
+        games.updateGameState(this.game.id, 'COMPLETE'); 
+
+        // We'll clean up here.  The machine now exists as just in memory data
         clearTimeout(this.gameTimer);
         arbiters.removeHandlers(this.id);
         games.removeHandlers(this.id);
-      }
+      },
     }
   });
+
+  fsm.configure();
 
   return fsm;
 }
 
-module.exports = buildStateMachine;
+module.exports = {
+  type: 'base-game',
+  description: 'Simple Game',
+  name: 'Base Name',
+  build: buildStateMachine,
+};

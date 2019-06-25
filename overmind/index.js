@@ -8,9 +8,10 @@ const { ApolloServer } = require('apollo-server-express');
 const Sequelize = require('sequelize');
 const arbiters = require('./arbiters.js');
 const games = require('./games.js');
-const buildMachine = require('./base-game.js');
 const http = require("http");
 const express = require("express");
+
+const baseGame = require('./base-game.js');
 
 /*
  * Boot up persistence layer
@@ -23,7 +24,8 @@ const sequelize = new Sequelize({
 games.initialize(sequelize);
 arbiters.initialize(sequelize);
 
-const machine = buildMachine();
+games.cleanUpOldGames();
+games.registerGameMachine(baseGame);
 
 /*
  * Setup WebSockets 

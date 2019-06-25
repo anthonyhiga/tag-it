@@ -34,10 +34,14 @@ const initialize = (db) => {
   sequelize = db;
 }
 
-const handlers = {};
+let handlers = {};
 const addHandler = (id, name, method) => {
   handlers[name] = method;
 }
+
+const removeHandlers = (id) => {
+  handlers = {};
+};
 
 // Private PUBSUB for Arbiters
 const pubsub = new PubSub();
@@ -304,6 +308,7 @@ const schema = makeExecutableSchema({
 
 module.exports = {
   addHandler,
+  removeHandlers,
   sendArbiterCommand,
   broadcastArbiterCommand,
   updateChannelState,
