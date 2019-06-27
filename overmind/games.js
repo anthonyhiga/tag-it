@@ -277,6 +277,7 @@ type GameType {
   name: String!
   type: String!
   description: String!
+  iconUrl: String!
 }
 
 type Game {
@@ -341,6 +342,7 @@ const resolvers = {
           type: key,
           description: value.description, 
           name: value.name,
+          iconUrl: value.iconUrl,
         };
       });
     },

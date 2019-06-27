@@ -56,9 +56,9 @@ const typeDefs = gql`
   }
 
   enum ArbiterChannelStatus {
-    PRESENT
-    SERVED
-    ABSENT
+    REQUESTING 
+    ASSIGNING    
+    AVAILABLE
   }
 
   enum ArbiterCommandStatus {
@@ -150,9 +150,9 @@ const resolvers = {
           name: args.name,
         };
         channelCache.push(currentChannel);
-      } else {
-      //  console.log("UPDATING CHANNEL: " + id + " TOTEM: " + args.totemId);
       }
+
+      console.log("UPDATING CHANNEL: " + id + " TOTEM: " + args.totemId + " STATUS: " + args.status);
 
       currentChannel.type = args.type;
       currentChannel.status = args.status;
@@ -294,6 +294,10 @@ const sendArbiterCommand = (arbiterId, message) => {
   return command;
 }
 
+const getChannelList = () => {
+  return channelCache;
+};
+
 const updateChannelState = (id, state) => {
   const channel = findChannel(id);
   if (channel != null) {
@@ -311,6 +315,7 @@ module.exports = {
   removeHandlers,
   sendArbiterCommand,
   broadcastArbiterCommand,
+  getChannelList,
   updateChannelState,
   initialize,
   typeDefs,

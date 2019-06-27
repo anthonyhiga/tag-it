@@ -35,7 +35,6 @@ class Executor(object):
         self.type = type
         self.handlers = handlers
         self.totemId = None
-        self.totemIdGen = 1
         self.reportCheckList = []
 
         self.outputStream = MessageOutputStream(outputPort)
@@ -49,6 +48,8 @@ class Executor(object):
         self.inputStream.start()
 
         self.addPlayerState = AddPlayerState.COMPLETE
+        self.addPlayerRequest = False
+        self.addPlayerCount = 0
 
         # Temp use button for totem
         self.button = Button(totemPort)
@@ -60,15 +61,37 @@ class Executor(object):
         thread.start()
 
         self.reportThread = thread
+        self.onChannelUpdate()
+
+    def requestChannelUpdate(self):
+        self.onChannelUpdate()
+
+    def onChannelUpdate(self):
+        state = 'ASSIGNING'
+        if self.addPlayerState == AddPlayerState.COMPLETE:
+            state = 'AVAILABLE'
+            if self.addPlayerRequest:
+                state = 'REQUESTING'
+
+        self.handlers['onChannelUpdated'](self.name, self.type, self.totemId, state) 
+
+    def stopAddPlayer(self):
+        self.addPlayerState = AddPlayerState.COMPLETE
+        self.addPlayerRequest = False 
+        self.addPlayerDetail = None
+        self.addPlayerMessage = None
+        self.addPlayerFailedMessage = None
+        self.addPlayerFailedCount = 6 
+        self.addPlayerCount = self.addPlayerCount + 1
+        self.onChannelUpdate()
 
     def onPress(self):
-        self.totemId = self.totemIdGen
-        self.totemIdGen = self.totemIdGen + 1 
-        self.handlers['onTotemUpdated'](self.name, self.type, self.totemId)
+        self.addPlayerRequest = True
+        self.onChannelUpdate()
 
     def onRelease(self):
-        self.totemId = None
-        self.handlers['onTotemUpdated'](self.name, self.type, self.totemId)
+        self.addPlayerRequest = True
+        self.onChannelUpdate()
 
     def onStandardBeacon(self, team, tag): 
         # Ignore for now
@@ -108,15 +131,12 @@ class Executor(object):
                 self.outputStream.send(confirm)
                 sleep(0.1)
                 self.outputStream.send(confirm)
+                self.onChannelUpdate()
 
             if (type == MessageType.CHANNEL_RELEASE and self.addPlayerState == AddPlayerState.ASSIGNED):
                 print("PLAYER JOIN CONFIRMED FROM TAGGER: " + str(message['taggerId']))
                 self.handlers['onPlayerAdded'](self.addPlayerDetail['id'], self.addPlayerDetail['totemId'])
-                self.addPlayerState = AddPlayerState.COMPLETE
-                self.addPlayerDetail = None
-                self.addPlayerMessage = None
-                self.addPlayerFailedMessage = None
-                self.addPlayerFailedCount = 6 
+                self.stopAddPlayer()
 
             if (type == MessageType.BASIC_DEBRIEF_DATA):
                 print("BASIC REPORT RECEIVED: " + str(message['teamId']) + ":" + str(message['playerId']))
@@ -233,13 +253,15 @@ class Executor(object):
         self.addPlayerMessage = genAnnounceGame(gameType, gameId, gameLengthInMin,
                 health, reloads, shields, megatags, totalTeams, options)
         self.addPlayerState = AddPlayerState.ADVERTISE
+        self.onChannelUpdate()
 
         thread = Thread(target=self.playerLoop)
         thread.start()
 
     def playerLoop(self):
         print("SEARCHING FOR NEW PLAYER")
-        while(self.addPlayerState!= AddPlayerState.COMPLETE):
+        instanceId = self.addPlayerCount
+        while(self.addPlayerState != AddPlayerState.COMPLETE and self.addPlayerCount == instanceId):
             if (self.addPlayerState == AddPlayerState.ADVERTISE):
                 self.outputStream.send(self.addPlayerMessage)
                 sleep(1.5)
@@ -250,6 +272,7 @@ class Executor(object):
                 if (self.addPlayerState == AddPlayerState.ASSIGNED):
                     print("CONNECTION FAILURE")
                     self.addPlayerState = AddPlayerState.FAILED
+                    self.onChannelUpdate()
 
             if (self.addPlayerState == AddPlayerState.FAILED):
                 self.outputStream.send(self.addPlayerFailedMessage)
@@ -259,6 +282,7 @@ class Executor(object):
                 if (self.addPlayerFailedCount <= 0):
                     print("SEARCH RESTARTED FOR NEW PLAYER")
                     self.addPlayerState = AddPlayerState.ADVERTISE
+                    self.onChannelUpdate()
             else:
                 sleep(0.5)
         print("ADD PLAYER COMPLETE")

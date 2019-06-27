@@ -8,6 +8,16 @@ const arbiters = require('./arbiters.js');
 const games = require('./games.js');
 
 const DEFAULT_GAME_SETTINGS = {
+  assignment: {
+    requestToAssign: false,
+    requireTotem: false,
+    registeredTotemsOnly: false,
+    channel: {
+      '00000000273d638a:main': {
+        teamId: 1,
+      }
+    }
+  },
   reportTimeLimitSec: 180,
   reportDelaySec: 1,
   countDownSec: 6,
@@ -26,12 +36,19 @@ function genId() {
   return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
 }
 
+function genTotemId() {
+  min = Math.ceil(1000000);
+  max = Math.floor(10000000);
+  return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
+}
+
 class BaseState {
   setStateMachine(machine) {
     this.fsm = machine;
   }
 
   onGameSettingsUpdate(settings) { console.warn('UNABLE TO CHANGE GAME SETTINGS'); }
+  onStartRegistration() { console.warn('UNABLE TO START REGISTRATION'); }
   onGameStart() { console.warn('UNABLE TO START GAME'); }
   onChannelUpdated(channel) { console.warn('UNABLE TO PROCESS CHANNEL UPDATE'); }
   onRegistrationStart() { console.warn('UNABLE TO START REGISTRATION'); }
@@ -58,10 +75,15 @@ class SetupState extends BaseState {
 }
 
 class RegistrationState extends BaseState {
+  onStartRegistration() {
+    arbiters.getChannelList().forEach((channel) => {
+      this.checkPolicyAndAssignPlayer(channel);
+    }); 
+  }
+
   onPlayerJoined(id, totemId) {
     const player = this.fsm.players[id];
     if (player) {
-      player.totemId = totemId;
       player.status = 'ACTIVE';
       console.log("PLAYER JOINED " + id + " TOTEM: " + totemId);
     } else {
@@ -74,6 +96,10 @@ class RegistrationState extends BaseState {
       console.log("THERE ARE NO PLAYERS, NOT STARTING");
       return;
     }
+
+    arbiters.broadcastArbiterCommand({
+      type: 'STOP_ADD_PLAYER'
+    });
 
     console.warn('STARTING GAME');
     const teams = this.fsm.teams;
@@ -99,9 +125,10 @@ class RegistrationState extends BaseState {
     });
   }
 
-  createPlayer() {
+  createPlayer(totemId) {
     const player = {
       id: genId(),
+      totemId: totemId != null ? totemId : genTotemId(),
       status: 'IDLE',
     }
 
@@ -121,47 +148,97 @@ class RegistrationState extends BaseState {
     return null;
   }
 
-  updateTeamAssignment(player, teamCount) {
-    const teams = this.fsm.teams;
-
-    let teamId = 1;
-    let team = teams[teamId];
+  findTeam() {
+    // use balance system.  Find team w/ least players and assign to that one
+    let team = teams[1];
     for (var i = 2; i <= teamCount; i++) {
       if (teams[i].count < team.count) {
         team = teams[i];
-        teamId = i;
       }
+    }
+    return team;
+  }
+
+  updateTeamAssignment(channel, player, teamCount) {
+    // If a player already has a team assigned, we use that
+    const teams = this.fsm.teams;
+    const channelSettings = this.fsm.settings.assignment.channel[channel.id];
+    let team = null;
+    if (player.teamId != null) {
+      team = teams[player.teamId]
+    } else if (channelSettings && channelSettings.teamId != null) {
+      team = teams[channelSettings.teamId]
+    } else {
+      team = findTeam();
+    }
+
+    if (team == null) {
+      return false;
     }
 
     const players = team.players;
+    if (players.length > 7) {
+      // We can't have more than 8 players per team
+      return false;
+    }
 
     player.playerId = players.length;
-    player.teamId = teamId;
+    player.teamId = team.id;
 
     players.push(player);
     team.count++;
-
-    console.log("ASSIGNING TO: " + player.teamId + " TEAM PLAYER ID: " + player.playerId);
+    return true;
   }
 
-  // now we need to calculate
-  onChannelUpdated(channel) {
-    if (channel.status !== 'PRESENT') {
-      return;
+  checkPolicyAndAssignPlayer(channel) {
+    // We'll only react and assign if the channel isn't currently
+    if (this.fsm.settings.assignment.requestToAssign) {
+      // we only want to assign a player if it is requesting
+      if (channel.status === 'REQUESTING') {
+        this.assignPlayerToChannel(channel);
+      }
+    } else {
+      if (channel.status === 'AVAILABLE' || channel.status === 'REQUESTING') {
+        this.assignPlayerToChannel(channel);
+      }
     }
+  }
 
+  assignPlayerToChannel(channel) {
     console.log('ARBITER ID: ' + channel.arbiterId + ' CHANNEL ACTIVE: ' + channel.name);
 
-    const player = this.getPlayerByTotemId(channel.totemId) || this.createPlayer();
+    if (this.fsm.settings.assignment.requireTotem) {
+      if (channel.totemId == null) {
+        console.log('CHANNEL HAS NO TOTEM, IGNORING');
+      }
+    }
+
+    let player = this.getPlayerByTotemId(channel.totemId);
+    if (this.fsm.settings.assignment.registeredTotemsOnly) {
+      if (player == null) {
+        console.log('UNABLE TO FIND PLAYER WITH TOTEM ID: ' + channel.totemId);
+        return;
+      }
+    }
+
+    if (player == null) {
+      // if we don't require a token id, we'll generate the player on demand
+      player = this.createPlayer(channel.totemId);
+    }
+
     if (player.status !== 'IDLE') {
-      console.log('CHANNEL PLAYER FOR TOTEM: ' + channel.totemId + " IS ALREADY " + player.status);
+      console.log('CHANNEL PLAYER FOR TOTEM: ' + player.totemId + " IS ALREADY " + player.status);
       // TODO: setup some kind of timeout in case we need one
       return;
     }
 
+    if (!this.updateTeamAssignment(channel, player, this.fsm.settings.totalTeams)) {
+      console.warn("FAILED TO ASSIGN PLAYER");
+      return;
+    }
+
     player.status = 'ADDING';
-    player.totemId = channel.totemId;
-    this.updateTeamAssignment(player, 2);
+    console.log("ASSIGNING TO: " + player.teamId + " TEAM PLAYER ID: " + player.playerId);
 
     arbiters.sendArbiterCommand(channel.arbiterId, {
       channel: channel.name,
@@ -173,6 +250,11 @@ class RegistrationState extends BaseState {
       playerId: player.playerId,
       ...this.fsm.settings,
     });
+  }
+
+  // now we need to calculate
+  onChannelUpdated(channel) {
+    this.checkPolicyAndAssignPlayer(channel);
   }
 }
 
@@ -221,18 +303,22 @@ function buildStateMachine(game) {
       },
       teams: [
         {
+          id: 0,
           count: 0,
           players: [],
         },
         {
+          id: 1,
           count: 0,
           players: [],
         },
         {
+          id: 2,
           count: 0,
           players: [],
         },
         {
+          id: 3,
           count: 0,
           players: [],
         },
@@ -281,6 +367,8 @@ function buildStateMachine(game) {
       onRegister: function() {
         games.updateGameState(this.game.id, 'REGISTRATION'); 
         console.warn('REGISTERING PLAYERS');
+
+        this.getState().onStartRegistration();
       },
       onStart: function() {
         console.warn('RUNNING GAME');
@@ -311,5 +399,6 @@ module.exports = {
   type: 'base-game',
   description: 'Simple Game',
   name: 'Base Name',
+  iconUrl: 'https://atgbcentral.com/data/out/36/4204664-cool-image.jpg',
   build: buildStateMachine,
 };

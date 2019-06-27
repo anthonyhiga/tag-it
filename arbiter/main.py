@@ -17,8 +17,9 @@ from executor import Executor
 #       food for thought.
 #
 
-def onTotemUpdated(name, type, totemId):
-    updateChannel(name, totemId, 'PRESENT' if totemId else 'ABSENT', type)
+
+def onChannelUpdated(name, type, totemId, state):
+    updateChannel(name, totemId, state, type)
 
 def onPlayerAdded(id, totemId):
     joinedPlayer(id, totemId)
@@ -50,12 +51,16 @@ def onTeamReport(gameId, report):
 
 channels = {
     'main': Executor('main', 'AREA', 3, 4, 2, {
-        'onTotemUpdated': onTotemUpdated,
+        'onChannelUpdated': onChannelUpdated,
         'onPlayerAdded': onPlayerAdded,
         'onBasicReport': onBasicReport,
         'onTeamReport': onTeamReport,
     }) 
 }
+
+def onReconnected():
+    channel = channels['main']
+    channel.requestChannelUpdate()
 
 def runCommand(raw):
     command = loads(raw)
@@ -91,12 +96,16 @@ def runCommand(raw):
                 command['options'],
         )
 
+    if type == 'STOP_ADD_PLAYER':
+        channel = channels['main']
+        channel.stopAddPlayer()
+
 def updateList(checkList):
     channel = channels['main']
     channel.requestTagReports(checkList) 
 
 registerArbiter()
 subscribeSettings()
-subscribeCommands(runCommand)
+subscribeCommands(runCommand, onReconnected)
 subscribeReportCheckList(updateList)
 pause()

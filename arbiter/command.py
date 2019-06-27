@@ -13,7 +13,7 @@ from threading import Thread
 #     15 dollars of additional hardware.
 #
 
-commandHistory = {}
+commandHistory = []
 
 def markCommandComplete(id):
     try:
@@ -27,7 +27,6 @@ def markCommandComplete(id):
         }
         """
         ws.query(query, variables={'id': id})
-        del commandHistory[id]
 
     except:
         print("ERROR: Unable talk to overmind")
@@ -45,7 +44,6 @@ def markCommandFailed(id):
         }
         """
         ws.query(query, variables={'id': id})
-        del commandHistory[id]
 
     except:
         print("ERROR: Unable talk to overmind")
@@ -69,7 +67,7 @@ def markCommandRunning(id):
         print("Unexpected error:", sys.exc_info()[0])
 
 
-def subscribeCommands(runCommand):
+def subscribeCommands(runCommand, onReconnected):
     def callback(_id, data):
       # format:
       # {'id': 'lgpFHp', 'type': 'data', 'payload': {'data': {'arbiter_active_commands': [{'status': 'START', 'id': '2', 'message': 'hello world'}]}}}
@@ -82,7 +80,10 @@ def subscribeCommands(runCommand):
           if command['status'] == 'RUNNING':
             continue
 
-          commandHistory[id] = command
+          commandHistory.append(id)
+          if len(commandHistory) > 20:
+              commandHistory.pop(0)
+
           markCommandRunning(id)
           print("RUNNING COMMAND: " + str(id))
           try:
@@ -119,6 +120,7 @@ def subscribeCommands(runCommand):
             variables={'id': serialNumber},\
             callback=callback)
 
+          onReconnected()
           print("Connected to Overmind")
 
           # block this thread and do nothing unless the connection
