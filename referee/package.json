@@ -1,0 +1,47 @@
+{
+  "name": "referee",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@material-ui/core": "^4.1.3",
+    "@material-ui/icons": "^4.2.1",
+    "@types/classnames": "^2.2.8",
+    "@types/node": "^12.0.10",
+    "@types/react": "^16.8.22",
+    "@types/react-dom": "^16.8.4",
+    "babel-plugin-relay": "^2.0.0-rc.2",
+    "get-graphql-schema": "^2.1.2",
+    "graphql": "^14.3.1",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "react-relay": "^5.0.0",
+    "react-scripts": "3.0.1",
+    "relay-compiler": "^5.0.0",
+    "subscriptions-transport-ws": "^0.8.3",
+    "typeface-roboto": "0.0.54",
+    "typescript": "^3.5.2"
+  },
+  "scripts": {
+    "schema": "npx get-graphql-schema http://localhost:4000/graphql > ./schema.graphql",
+    "relay": "npx relay-compiler --src=./src --schema=./schema.graphql",
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

@@ -1,0 +1,208 @@
+type ArbiterChannel {
+  id: ID!
+  name: ID!
+  arbiterId: ID!
+  type: ArbiterChannelType!
+  status: ArbiterChannelStatus!
+  totemId: ID
+}
+
+enum ArbiterChannelStatus {
+  REQUESTING
+  ASSIGNING
+  AVAILABLE
+}
+
+enum ArbiterChannelType {
+  AREA
+  HOLSTER
+  TARGET
+}
+
+type ArbiterCommand {
+  id: ID!
+  arbiterId: ID!
+  status: ArbiterCommandStatus!
+  message: String!
+  response: String
+}
+
+enum ArbiterCommandStatus {
+  START
+  RUNNING
+  COMPLETE
+  FAILED
+}
+
+type ArbiterSettings {
+  id: ID!
+  zoneType: ArbiterZoneMode!
+}
+
+enum ArbiterZoneMode {
+  DISABLED
+  SUPPLY_ZONE
+  HOSTILE_ZONE
+  CONTESTED_ZONE
+}
+
+input BasicTagReport {
+  gameId: ID!
+  ltGameId: ID!
+  ltTeamId: ID!
+  ltPlayerId: ID!
+  zoneTimeSec: Int!
+  survivedTimeSec: Int!
+  tagsReceived: Int!
+  followUpReports: [ID]
+}
+
+type CurrentGameSettings {
+  countDownSec: Int
+  gameLengthInMin: Int
+  health: Int
+  reloads: Int
+  shields: Int
+  megatags: Int
+  totalTeams: Int
+  options: [String]
+}
+
+type Game {
+  id: ID!
+  ltId: ID!
+  name: String
+  status: GameStatus!
+  completedAt: String
+  startedAt: String
+}
+
+type GamePlayerScore {
+  id: ID!
+  gameId: ID!
+  teamId: ID
+  playerId: ID
+  totalTagsReceived: Int!
+  totalTagsGiven: Int!
+  survivedTimeSec: Int!
+  zoneTimeSec: Int!
+  ltGameId: ID!
+  ltTeamId: ID!
+  ltPlayerId: ID!
+}
+
+input GameSettings {
+  countDownSec: Int
+  gameLengthInMin: Int
+  health: Int
+  reloads: Int
+  shields: Int
+  megatags: Int
+  totalTeams: Int
+  options: [String]
+}
+
+enum GameStatus {
+  SETUP
+  REGISTRATION
+  RUNNING
+  SCORING
+  AWARDS
+  COMPLETE
+}
+
+type GameType {
+  name: String!
+  type: String!
+  description: String!
+  iconUrl: String!
+}
+
+type Mutation {
+  update_arbiter_channel(arbiterId: ID!, name: String!, type: ArbiterChannelType, status: ArbiterChannelStatus, totemId: ID): ArbiterChannel
+  register_arbiter_settings(id: ID!): ArbiterSettings
+  update_arbiter_settings(settings: UpdateArbiterSettings): ArbiterSettings
+  send_arbiter_command(arbiterId: ID!, message: String!): ArbiterCommand
+  respond_arbiter_command(id: ID!, response: String, status: ArbiterCommandStatus!): ArbiterCommand
+  file_basic_tag_report(report: BasicTagReport!): Game
+  file_team_tag_report(report: TeamTagReport!): Game
+  joined_player(id: ID!, totemId: ID): Player!
+  create_game(type: String!, name: String): Game
+  update_game_settings(id: ID!, settings: GameSettings!): Game
+  start_game(id: ID!): Game
+  start_registration(id: ID!): Game
+}
+
+type Player {
+  id: ID!
+  status: PlayerStatus!
+  ltTeamId: ID
+  ltPlayerId: ID
+  name: String
+  totemId: ID!
+  avatarUrl: String!
+  iconUrl: String!
+}
+
+enum PlayerStatus {
+  IDLE
+  JOINING
+  ACTIVE
+}
+
+type Query {
+  arbiter_settings_list: [ArbiterSettings]
+  arbiter_settings(id: ID!): ArbiterSettings
+  arbiter_active_commands(id: ID!): [ArbiterCommand]
+  game_types_list: [GameType]
+  game_score(id: ID!): [GamePlayerScore]
+  games_list: [Game]
+  game(id: ID!): Game
+  active_games_list: [Game]
+  game_settings(id: ID!): CurrentGameSettings
+}
+
+type ReportCheckListItem {
+  gameId: ID!
+  ltGameId: ID!
+  ltTeamId: ID!
+  ltPlayerId: ID!
+  ltTagTeamId: ID
+  type: ReportType!
+  status: ReportStatusType!
+}
+
+enum ReportStatusType {
+  PENDING
+  COMPLETE
+}
+
+enum ReportType {
+  TEAM
+  BASIC
+}
+
+type Subscription {
+  arbiter_settings_updated(id: ID!): ArbiterSettings
+  arbiter_active_commands(id: ID!): [ArbiterCommand]
+  game_score(id: ID!): [GamePlayerScore]
+  report_check_list: [ReportCheckListItem]
+  games_list: [Game]
+  active_games_list: [Game]
+  active_players_list: [Player]
+}
+
+input TeamTagReport {
+  gameId: ID!
+  ltGameId: ID!
+  ltTeamId: ID!
+  ltPlayerId: ID!
+  ltTagTeamId: ID!
+  tags: [Int]
+}
+
+input UpdateArbiterSettings {
+  id: ID!
+  zoneType: ArbiterZoneMode!
+}
+
