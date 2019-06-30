@@ -1,12 +1,10 @@
-import sys, traceback
+import sys, traceback, os
 from signal import pause 
 from time import sleep
 from threading import Timer, Thread 
 from gpiozero import Button
 from enum import Enum
 
-import os
-import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) 
 
 from tagit.bus import MessageInputStream, MessageOutputStream
@@ -29,8 +27,8 @@ class AddPlayerState(Enum):
 #
 ###############################################################################
 class Executor(object):
-    def __init__(self, name, type, inputPort, outputPort, totemPort, handlers):
-        print("CHANNEL SETUP INPUT: " + str(inputPort) + " OUTPUT: " + str(outputPort) + " TOTEM: " + str(totemPort))
+    def __init__(self, name, type, inputPort, outputPort, handlers):
+        print("CHANNEL SETUP INPUT: " + str(inputPort) + " OUTPUT: " + str(outputPort))
         self.name = name
         self.type = type
         self.handlers = handlers
@@ -51,17 +49,10 @@ class Executor(object):
         self.addPlayerRequest = False
         self.addPlayerCount = 0
 
-        # Temp use button for totem
-        self.button = Button(totemPort)
-
-        self.button.when_pressed = self.onPress
-        self.button.when_released = self.onRelease
-
         thread = Thread(target=self.reportMonitor)
         thread.start()
 
         self.reportThread = thread
-        self.onChannelUpdate()
 
     def requestChannelUpdate(self):
         self.onChannelUpdate()
@@ -85,12 +76,13 @@ class Executor(object):
         self.addPlayerCount = self.addPlayerCount + 1
         self.onChannelUpdate()
 
-    def onPress(self):
+    def requestPlayer(self):
         self.addPlayerRequest = True
         self.onChannelUpdate()
 
-    def onRelease(self):
-        self.addPlayerRequest = True
+    def setTotemId(self, totemId):
+        print("SETTING TOTEM TO: " + str(totemId))
+        self.totemId = totemId
         self.onChannelUpdate()
 
     def onStandardBeacon(self, team, tag): 
@@ -221,7 +213,7 @@ class Executor(object):
                     team3Report,
                     summary)
             self.outputStream.send(message)
-            sleep(2) # we wait 2 seconds for a response
+            sleep(3) # we wait 3 seconds for a response
 
         except: 
           print("Unexpected error:", sys.exc_info()[0])
@@ -264,7 +256,7 @@ class Executor(object):
         while(self.addPlayerState != AddPlayerState.COMPLETE and self.addPlayerCount == instanceId):
             if (self.addPlayerState == AddPlayerState.ADVERTISE):
                 self.outputStream.send(self.addPlayerMessage)
-                sleep(1.5)
+                sleep(1)
             if (self.addPlayerState == AddPlayerState.ASSIGNED):
                 # wait 4 seconds for confirmation if none found, we
                 # consider it failed and send out a failure 6 times

@@ -9,6 +9,7 @@ const {Game, GamePlayerScore} = require("./models");
 const Sequelize = require('sequelize');
 
 const Op = Sequelize.Op;
+const PLAYERS_UPDATED = 'PLAYERS_UPDATED';
 const GAMES_UPDATED = 'GAMES_UPDATED';
 const REPORT_CHECKLIST_UPDATED = 'REPORT_CHECKLIST_UPDATED';
 const GAME_SCORE_UPDATED = 'GAME_SCORE_UPDATED';
@@ -24,6 +25,7 @@ let scoringTimer = null;
 let reportCheckListCache = {};
 let reportBasicScoreCache = {};
 let reportTeamScoreCache = {};
+let finalizingScore = false;
 
 /*
  * Boot up persistence layer
@@ -71,8 +73,24 @@ const cleanUpOldGames = () => {
   }}).then((games) => {
     games.forEach((game) => {
       game.status = 'COMPLETE';
+      game.completedAt = new Date();
       game.save();
     });
+  });
+}
+
+let gameSettings = {};
+const updateGameSettings = (settings) => {
+  console.warn('UPDATED SETTINGS');
+  gameSettings = settings;
+}
+
+let playersCache = [];
+const updatePlayers = (players) => {
+  playersCache = players;
+
+  pubsub.publish(PLAYERS_UPDATED, {
+    active_players_list: playersCache,
   });
 }
 
@@ -80,6 +98,12 @@ const updateGameState = (id, status) => {
   return Game.findByPk(id).then(game => {
     if (game != null) {
       game.status = status;
+      if (status === "RUNNING") {
+        game.startedAt = new Date();
+      }
+      if (status === "AWARDS") {
+        game.completedAt = new Date();
+      }
       return game.save();
     }
 
@@ -102,6 +126,12 @@ const updateGameState = (id, status) => {
 };
 
 const finalizeScore = () => {
+  if (finalizingScore) {
+    return;
+  }
+
+  finalizingScore = true;
+
   if(scoringTimer) {
     clearTimeout(scoringTimer);
     scoringTimer = null;
@@ -157,6 +187,14 @@ const finalizeScore = () => {
       if (handlers.onFinalScore) {
         handlers.onFinalScore(finalScore);
 
+        reportCheckListCache = {};
+        reportBasicScoreCache = {};
+        reportTeamScoreCache = {};
+
+        pubsub.publish(REPORT_CHECKLIST_UPDATED, {
+          report_check_list: getReportItemList()
+        });
+
         console.log("CLEARING GAME MACHINE");
         delete gameMachineCache[gameId];
       }
@@ -188,6 +226,7 @@ const scoreGame = (reportItems, timeLimitMs) => {
     finalizeScore();
   }, timeLimitMs);
 
+  finalizingScore = false;
   reportCheckListCache = {};
   reportBasicScoreCache = {};
   reportTeamScoreCache = {};
@@ -208,8 +247,32 @@ const scoreGame = (reportItems, timeLimitMs) => {
   pubsub.publish(REPORT_CHECKLIST_UPDATED, {
     report_check_list: getReportItemList()
   });
+
+  setInterval(() => {
+    pubsub.publish(REPORT_CHECKLIST_UPDATED, {
+      report_check_list: getReportItemList()
+    });
+  }, 2000);
 };
 
+const forceSubscriptionUpdate = () => { 
+  Promise.all([
+    Game.findAll(),
+    Game.findAll({where: {
+      status: {
+        [Op.ne]: 'COMPLETE'
+      }
+    }})
+  ]).then((results) => {
+    pubsub.publish(GAMES_UPDATED, {
+      games_list: results[0],
+      active_games_list: results[1], 
+    });
+    pubsub.publish(PLAYERS_UPDATED, {
+      active_players_list: playersCache,
+    });
+  });
+};
 
 // Type definitions define the "shape" of your data and specify
 // which ways the data can be fetched from the GraphQL server.
@@ -219,6 +282,7 @@ enum GameStatus {
   REGISTRATION
   RUNNING
   SCORING
+  AWARDS
   COMPLETE
 }
 
@@ -285,10 +349,36 @@ type Game {
     ltId: ID!
     name: String
   status: GameStatus!
+  completedAt: String
+  startedAt: String
+}
+
+type CurrentGameSettings {
+  countDownSec: Int
+  gameLengthInMin: Int
+  health: Int
+  reloads: Int
+  shields: Int
+  megatags: Int
+  totalTeams: Int
+  options: [String]
+}
+
+enum PlayerStatus {
+  IDLE 
+  JOINING 
+  ACTIVE 
 }
 
 type Player {
   id: ID!
+  status: PlayerStatus!
+  ltTeamId: ID
+  ltPlayerId: ID
+  name: String
+  totemId: ID!
+  avatarUrl: String!
+  iconUrl: String!
 }
 
 type GamePlayerScore {
@@ -311,6 +401,7 @@ type Query {
   games_list: [Game]
   game(id: ID!): Game
   active_games_list: [Game]
+  game_settings(id: ID!): CurrentGameSettings
 }
 
 type Subscription {
@@ -318,6 +409,7 @@ type Subscription {
   report_check_list: [ReportCheckListItem]
   games_list: [Game]
   active_games_list: [Game]
+  active_players_list: [Player]
 }
 
 type Mutation {
@@ -345,6 +437,9 @@ const resolvers = {
           iconUrl: value.iconUrl,
         };
       });
+    },
+    game_settings: async (root, args, context) => {
+      return gameSettings;
     },
     game_score: async (root, args, context) => {
       return await GamePlayerScore.findAll({
@@ -386,8 +481,8 @@ const resolvers = {
             ...args.report,
             ltTagTeamId: followUp
           });
-          console.warn('ADDING FOLLOW UP: ' + followUpKey);
           if (reportCheckListCache[followUpKey] == null) {
+            console.warn('ADDING FOLLOW UP: ' + followUpKey);
             reportCheckListCache[followUpKey] = {
               gameId: args.report.gameId,
               ltGameId: args.report.ltGameId,
@@ -530,6 +625,9 @@ const resolvers = {
     active_games_list: {
       subscribe: () => pubsub.asyncIterator([GAMES_UPDATED])
     },
+    active_players_list: {
+      subscribe: () => pubsub.asyncIterator([PLAYERS_UPDATED])
+    },
   },
 };
 
@@ -539,6 +637,9 @@ const schema = makeExecutableSchema({
 });
 
 module.exports = {
+  updateGameSettings,
+  updatePlayers,
+  forceSubscriptionUpdate,
   cleanUpOldGames,
   registerGameMachine,
   updateGameState,

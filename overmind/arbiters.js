@@ -157,7 +157,6 @@ const resolvers = {
       currentChannel.type = args.type;
       currentChannel.status = args.status;
       currentChannel.totemId = args.totemId;
-      console.log(currentChannel);
 
       pubsub.publish(ARBITER_CHANNEL_UPDATED, {
         arbiter_channel_updated: currentChannel 

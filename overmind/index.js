@@ -18,7 +18,8 @@ const baseGame = require('./base-game.js');
  */
 const sequelize = new Sequelize({
   dialect: 'sqlite',
-  storage: './database.sqlite'
+  storage: './database.sqlite', 
+  logging: false,
 });
 
 games.initialize(sequelize);
@@ -35,6 +36,11 @@ const PORT = 4000;
 const app = express();
 
 const server = new ApolloServer({
+  subscriptions: {
+    onConnect: (connectionParams, webSocket, context) => {
+      games.forceSubscriptionUpdate();
+    }
+  },
   schema: mergeSchemas({
     schemas: [arbiters.schema, games.schema]
   })

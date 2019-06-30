@@ -1,3 +1,4 @@
+import os, sys, traceback
 from graphql_client import GraphQLClient
 from signal import pause 
 from command import subscribeCommands
@@ -5,7 +6,12 @@ from reports import subscribeReportCheckList
 from game import joinedPlayer, fileBasicReport, fileTeamReport
 from settings import subscribeSettings, registerArbiter, updateChannel
 from json import loads 
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) 
+
 from executor import Executor
+
+from totem import TotemPort 
 
 #
 # NOTE: for now we'll assume all arbiters have just 1 port, however
@@ -50,12 +56,16 @@ def onTeamReport(gameId, report):
     })
 
 channels = {
-    'main': Executor('main', 'AREA', 3, 4, 2, {
+    'main': Executor('main', 'AREA', 3, 4, {
         'onChannelUpdated': onChannelUpdated,
         'onPlayerAdded': onPlayerAdded,
         'onBasicReport': onBasicReport,
         'onTeamReport': onTeamReport,
     }) 
+}
+
+totems = {
+    'main': TotemPort(17,18,27, channels['main'].setTotemId)
 }
 
 def onReconnected():
@@ -97,6 +107,10 @@ def runCommand(raw):
         )
 
     if type == 'STOP_ADD_PLAYER':
+        channel = channels['main']
+        channel.stopAddPlayer()
+
+    if type == 'RESET':
         channel = channels['main']
         channel.stopAddPlayer()
 

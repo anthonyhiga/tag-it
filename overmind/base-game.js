@@ -3,6 +3,8 @@
  *  This is a Base Implementation of a Custom Game
  *
  ******************************************************/
+const faker = require('faker');
+
 const StateMachine = require('javascript-state-machine');
 const arbiters = require('./arbiters.js');
 const games = require('./games.js');
@@ -13,14 +15,16 @@ const DEFAULT_GAME_SETTINGS = {
     requireTotem: false,
     registeredTotemsOnly: false,
     channel: {
+      /*
       '00000000273d638a:main': {
         teamId: 1,
       }
+      */
     }
   },
   reportTimeLimitSec: 180,
   reportDelaySec: 1,
-  countDownSec: 6,
+  countDownSec: 20,
   gameLengthInMin: 1, // five minute game
   health: 5,   // 20 tags
   reloads: 100, // infinite
@@ -47,6 +51,7 @@ class BaseState {
     this.fsm = machine;
   }
 
+  onStarted() {}
   onGameSettingsUpdate(settings) { console.warn('UNABLE TO CHANGE GAME SETTINGS'); }
   onStartRegistration() { console.warn('UNABLE TO START REGISTRATION'); }
   onGameStart() { console.warn('UNABLE TO START GAME'); }
@@ -55,6 +60,11 @@ class BaseState {
   onPlayerJoined(id, totemId) { console.warn('UNABLE ADD PLAYER TO GAME'); }
   onScoringStarted() { console.warn('UNABLE SCORE GAME'); }
   onFinalScore() { console.warn('UNABLE USE FINAL SCORE'); }
+
+  updatePlayers() {
+    const players = Object.values(this.fsm.players).sort((a, b) => {a.id < b.id}); 
+    games.updatePlayers(players);
+  }
 }
 
 class IdleState extends BaseState {
@@ -71,6 +81,7 @@ class SetupState extends BaseState {
       ...this.fsm.settings,
       ...settings
     };
+    games.updateGameSettings(this.fsm.settings);
   }
 }
 
@@ -79,6 +90,11 @@ class RegistrationState extends BaseState {
     arbiters.getChannelList().forEach((channel) => {
       this.checkPolicyAndAssignPlayer(channel);
     }); 
+
+    this.fsm.updateTimer = setInterval(() => {
+      // Game Over
+      this.updatePlayers();
+    }, 10000);
   }
 
   onPlayerJoined(id, totemId) {
@@ -89,40 +105,19 @@ class RegistrationState extends BaseState {
     } else {
       console.warn('PLAYER NOT REGISTERED, UNABLE TO JOIN PLAYER');
     }
+
+    this.updatePlayers();
   }
 
   onGameStart() {
-    if (Object.keys(this.fsm.players).length <= 0) {
+    if (Object.values(this.fsm.players).find((player) => (player.status === "ACTIVE")) == null) {
       console.log("THERE ARE NO PLAYERS, NOT STARTING");
       return;
     }
 
-    arbiters.broadcastArbiterCommand({
-      type: 'STOP_ADD_PLAYER'
-    });
-
-    console.warn('STARTING GAME');
-    const teams = this.fsm.teams;
-
-    const gameLength = this.fsm.settings.gameLengthInMin * 60
-      + this.fsm.settings.countDownSec
-      + this.fsm.settings.reportDelaySec;
-
-    this.fsm.gameTimer = setTimeout(() => {
-      // Game Over
-      this.fsm.score();
-    }, gameLength * 1000);
+    clearInterval(this.fsm.updateTimer);
 
     this.fsm.start()
-
-    arbiters.broadcastArbiterCommand({
-      type: 'START_GAME',
-      gameId: this.fsm.game.ltId,
-      team1Count: teams[1].count,
-      team2Count: teams[2].count,
-      team3Count: teams[3].count,
-      countDownSec: this.fsm.settings.countDownSec,
-    });
   }
 
   createPlayer(totemId) {
@@ -130,10 +125,14 @@ class RegistrationState extends BaseState {
       id: genId(),
       totemId: totemId != null ? totemId : genTotemId(),
       status: 'IDLE',
+      name: faker.name.findName(),
+      iconUrl: faker.image.imageUrl(),
+      avatarUrl: faker.internet.avatar(),
     }
 
     console.log("ADDING NEW PLAYER: " + player.id);
     this.fsm.players[player.id] = player;
+    this.updatePlayers();
     return player;
   }
 
@@ -148,7 +147,7 @@ class RegistrationState extends BaseState {
     return null;
   }
 
-  findTeam() {
+  findTeam(teams, teamCount) {
     // use balance system.  Find team w/ least players and assign to that one
     let team = teams[1];
     for (var i = 2; i <= teamCount; i++) {
@@ -164,26 +163,28 @@ class RegistrationState extends BaseState {
     const teams = this.fsm.teams;
     const channelSettings = this.fsm.settings.assignment.channel[channel.id];
     let team = null;
-    if (player.teamId != null) {
-      team = teams[player.teamId]
+    if (player.ltTeamId != null) {
+      team = teams[player.ltTeamId]
     } else if (channelSettings && channelSettings.teamId != null) {
       team = teams[channelSettings.teamId]
     } else {
-      team = findTeam();
+      team = this.findTeam(teams, teamCount);
     }
 
     if (team == null) {
+      console.warn('UNABLE TO FIND TEAM FOR PLAYER: ' + player.id);
       return false;
     }
 
     const players = team.players;
     if (players.length > 7) {
       // We can't have more than 8 players per team
+      console.warn('TOO MANY PLAYERS ON TEAM: ' + team.id);
       return false;
     }
 
-    player.playerId = players.length;
-    player.teamId = team.id;
+    player.ltPlayerId = players.length;
+    player.ltTeamId = team.id;
 
     players.push(player);
     team.count++;
@@ -237,8 +238,8 @@ class RegistrationState extends BaseState {
       return;
     }
 
-    player.status = 'ADDING';
-    console.log("ASSIGNING TO: " + player.teamId + " TEAM PLAYER ID: " + player.playerId);
+    player.status = 'JOINING';
+    console.log("ASSIGNING TO: " + player.ltTeamId + " TEAM PLAYER ID: " + player.ltPlayerId);
 
     arbiters.sendArbiterCommand(channel.arbiterId, {
       channel: channel.name,
@@ -246,8 +247,8 @@ class RegistrationState extends BaseState {
       id: player.id,
       gameType: 'CUSTOM',
       gameId: this.fsm.game.ltId,
-      teamId: player.teamId,
-      playerId: player.playerId,
+      teamId: player.ltTeamId,
+      playerId: player.ltPlayerId,
       ...this.fsm.settings,
     });
   }
@@ -259,6 +260,32 @@ class RegistrationState extends BaseState {
 }
 
 class RunningState extends BaseState {
+  onStarted() {
+    console.warn('GAME RUNNING');
+    arbiters.broadcastArbiterCommand({
+      type: 'STOP_ADD_PLAYER'
+    });
+
+    const teams = this.fsm.teams;
+
+    const gameLength = this.fsm.settings.gameLengthInMin * 60
+      + this.fsm.settings.countDownSec
+      + this.fsm.settings.reportDelaySec;
+
+    this.fsm.gameTimer = setTimeout(() => {
+      // Game Over
+      this.fsm.score();
+    }, gameLength * 1000);
+
+    arbiters.broadcastArbiterCommand({
+      type: 'START_GAME',
+      gameId: this.fsm.game.ltId,
+      team1Count: teams[1].count,
+      team2Count: teams[2].count,
+      team3Count: teams[3].count,
+      countDownSec: this.fsm.settings.countDownSec,
+    });
+  }
 }
 
 class ScoringState extends BaseState {
@@ -266,11 +293,13 @@ class ScoringState extends BaseState {
     games.updateGameState(this.fsm.game.id, 'SCORING'); 
 
     const teams = this.fsm.teams;
-    const players = Object.entries(this.fsm.players).map((player) => ({
+    const players = Object.entries(this.fsm.players).filter(
+      (player) => ( player[1].status === 'ACTIVE' )
+    ).map((player) => ({
       gameId: this.fsm.game.id,
       ltGameId: this.fsm.game.ltId,
-      ltTeamId: player[1].teamId,
-      ltPlayerId: player[1].playerId,
+      ltTeamId: player[1].ltTeamId,
+      ltPlayerId: player[1].ltPlayerId,
     }))
 
     games.scoreGame(players,
@@ -349,6 +378,11 @@ function buildStateMachine(game) {
       },
       onInit: function() {
         console.warn('BOOTING UP GAME ENGINE');
+        // Kill all activity 
+        arbiters.broadcastArbiterCommand({
+          type: 'RESET'
+        });
+
         arbiters.addHandler(this.id, 'onChannelUpdated', (channel) => {
           this.getState().onChannelUpdated(channel);
         })
@@ -360,6 +394,8 @@ function buildStateMachine(game) {
         games.addHandler(this.id, 'onFinalScore', (id, finalScore) => {
           this.getState().onFinalScore(id, finalScore);
         })
+
+        games.updateGameSettings(this.settings);
       },
       onSetup: function(args) {
         console.warn('SETTING UP GAME');
@@ -373,6 +409,7 @@ function buildStateMachine(game) {
       onStart: function() {
         console.warn('RUNNING GAME');
         games.updateGameState(this.game.id, 'RUNNING'); 
+        this.getState().onStarted();
       },
       onScore: function() {
         console.warn('SCORING GAME');
@@ -380,7 +417,7 @@ function buildStateMachine(game) {
       },
       onComplete: function() {
         console.warn('GAME COMPLETE');
-        games.updateGameState(this.game.id, 'COMPLETE'); 
+        games.updateGameState(this.game.id, 'AWARDS'); 
 
         // We'll clean up here.  The machine now exists as just in memory data
         clearTimeout(this.gameTimer);
