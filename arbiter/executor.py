@@ -204,7 +204,8 @@ class Executor(object):
                 " TEAM 3: " + str(team3Report) +
                 " SUMMARY: " + str(summary))
 
-            message = genRequestTagReport(
+            for i in range(0, 3):
+              message = genRequestTagReport(
                     int(player['ltGameId']),
                     int(player['ltTeamId']),
                     int(player['ltPlayerId']),
@@ -212,8 +213,8 @@ class Executor(object):
                     team2Report,
                     team3Report,
                     summary)
-            self.outputStream.send(message)
-            sleep(3) # we wait 3 seconds for a response
+              self.outputStream.send(message)
+              sleep(1.5) # we wait 3 seconds for a response
 
         except: 
           print("Unexpected error:", sys.exc_info()[0])
@@ -247,6 +248,7 @@ class Executor(object):
         self.addPlayerState = AddPlayerState.ADVERTISE
         self.onChannelUpdate()
 
+        self.addPlayerCount = self.addPlayerCount + 1
         thread = Thread(target=self.playerLoop)
         thread.start()
 

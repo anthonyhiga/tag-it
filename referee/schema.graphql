@@ -128,6 +128,7 @@ type Mutation {
   file_team_tag_report(report: TeamTagReport!): Game
   joined_player(id: ID!, totemId: ID): Player!
   create_game(type: String!, name: String): Game
+  end_game(id: ID!): Game
   update_game_settings(id: ID!, settings: GameSettings!): Game
   start_game(id: ID!): Game
   start_registration(id: ID!): Game

@@ -20,24 +20,24 @@ const useStyles = makeStyles({
 
 
 const query= graphql`
-mutation GameStartButtonMutation($id: ID!) {
-  start_game(id: $id) {
+mutation GameEndButtonMutation($id: ID!) {
+  end_game(id: $id) {
     id
   }
 }
 `;
 
-const startGame = (id) => {
+const endGame = (id) => {
   commitMutation(environment, {mutation: query, variables: {id}}); 
 }      
 
-export default function GameStartButton(props) { 
+export default function GameEndButton(props) { 
     const { id } = props.game;
     const click = () => {
-      startGame(id);
+      endGame(id);
     };
 
     return (
-      <Button color="primary" variant="contained" onClick={click}>Start Game</Button>
+      <Button color="primary" variant="contained" onClick={click}>End Game</Button>
     );
 }

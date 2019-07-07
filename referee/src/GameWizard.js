@@ -5,6 +5,7 @@ import graphql from 'babel-plugin-relay/macro';
 import environment from './SubEnvironment.js';
 
 import { makeStyles } from '@material-ui/core/styles';
+import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import Container from '@material-ui/core/Container';
 import LinearProgress from '@material-ui/core/LinearProgress';
@@ -18,10 +19,20 @@ import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 
+import InputLabel from '@material-ui/core/InputLabel';
+import Select from '@material-ui/core/Select';
+import MenuItem from '@material-ui/core/MenuItem';
+import FormControl from '@material-ui/core/FormControl';
+import TextField from '@material-ui/core/TextField';
+
 import GameTypeCard from './GameTypeCard';
 import GamePlayerCard from './GamePlayerCard';
 import GameStartRegistrationButton from './GameStartRegistrationButton';
 import GameStartButton from './GameStartButton';
+import GameEndButton from './GameEndButton';
+
+import Fade from '@material-ui/core/Fade';
+import Slide from '@material-ui/core/Slide';
 
 const { useState } = React;
 
@@ -74,7 +85,7 @@ subscription GameWizardActivePlayersSubscription {
     ltPlayerId
     name
     totemId
-    avatarUrl 
+    avatarUrl
     iconUrl
   }
 }
@@ -163,6 +174,12 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
+function Transition(props) {
+  return (<Slide direction="left" in={true} mountOnEnter unmountOnExit>
+    {props.children}
+  </Slide>);
+}
+
 function getSteps() {
   return [
     'Select type of Game',
@@ -220,30 +237,65 @@ const GameTypeSelector = (props) => {
 const GameSetup = (props) => {
   const classes = useStyles();
   return (
+    <Transition>
+    <Box display="flex" flexDirection="column" minHeight={300}> 
+    <Box flexGrow={1}>
     <Grid alignContent={'flex-end'} className={classes.container}>
     <QueryRenderer
-      environment={environment}
-      query={gameSettingsQuery}
-      variables = {{id: props.game.id}}
-      render={({error, props}) => {
-        if (error) {
-          return <div>Unable to Load</div>;
-        }
-        if (!props) {
-          return <div>Loading...</div>;
-        }
-        console.warn(props);
-        return null;
-      }}
+    environment={environment}
+    query={gameSettingsQuery}
+    variables = {{id: props.game.id}}
+    render={({error, props}) => {
+      if (error) {
+        return <div>Unable to Load</div>;
+      }
+      if (!props) {
+        return <div>Loading...</div>;
+      }
+      return (
+        <Grid container spacing={3}>
+        <Grid item xs={2}>
+        <TextField label="Game Length (min)" />
+        </Grid>
+        <Grid item xs={2}>
+        <TextField label="Health" />
+        </Grid>
+        <Grid item xs={2}>
+        <TextField label="Reloads" />
+        </Grid>
+        <Grid item xs={2}>
+        <TextField label="Shields" />
+        </Grid>
+        <Grid item xs={2}>
+        <TextField label="Megatags" />
+        </Grid>
+        <Grid item xs={2}>
+        <TextField label="Total Teams" />
+        </Grid>
+        </Grid>
+      );
+    }}
     />
-    <GameStartRegistrationButton game={props.game}/>
     </Grid>
+    </Box>
+    <Box/>
+    <Box alignItems="flex-end" selfAlign="flex-end" display="flex"> 
+    <Box flexGrow={1}/>
+    <GameStartRegistrationButton game={props.game}/>
+    </Box>
+    </Box>
+    </Transition>
   )
 }
 
 const GameRegistration = (props) => {
+  const game = props.game;
   const classes = useStyles();
-  return (<QueryRenderer
+  return (
+    <Transition>
+    <Box display="flex" flexDirection="column" minHeight={300}> 
+    <Box>
+    <QueryRenderer
     environment={environment}
     query={activePlayersQuery}
     variables = {{}}
@@ -265,7 +317,16 @@ const GameRegistration = (props) => {
         }
         </Grid>;
     }}
-    />);
+    />
+    </Box>
+    <Box/>
+    <Box alignItems="flex-end" selfAlign="flex-end" display="flex"> 
+    <Box flexGrow={1}/>
+    <GameStartButton game={game}/>
+    </Box>
+    </Box>
+    </Transition>
+  );
 }
 
 const GameCountDown = (props => {
@@ -274,14 +335,14 @@ const GameCountDown = (props => {
   const game = props.game;
   const startTime = game.startedAt;
   const startDate = (new Date(parseInt(startTime,10))).getTime();
-  const timePassed = Math.floor(clock - startDate); 
+  const timePassed = Math.floor(clock - startDate);
 
   const countDown = props.settings.countDownSec * 1000 + FUDGE;
   const gameTime = props.settings.gameLengthInMin * 60000;
   const totalTime = countDown + gameTime;
 
   const timeLeft = (totalTime - timePassed);
-  if (timeLeft >= 0) { 
+  if (timeLeft >= 0) {
     setTimeout(() => {
       const now = (new Date()).getTime()
       setClock(now);
@@ -304,18 +365,18 @@ const GameRunning = (props) => {
   const classes = useStyles();
   return (
     <QueryRenderer
-      environment={environment}
-      query={gameSettingsQuery}
-      variables = {{id: props.game.id}}
-      render={({error, props}) => {
-        if (error) {
-          return <div>Unable to Load</div>;
-        }
-        if (!props) {
-          return <div>Loading...</div>;
-        }
-        return <GameCountDown game={game} settings={props.game_settings}/>;
-      }}
+    environment={environment}
+    query={gameSettingsQuery}
+    variables = {{id: props.game.id}}
+    render={({error, props}) => {
+      if (error) {
+        return <div>Unable to Load</div>;
+      }
+      if (!props) {
+        return <div>Loading...</div>;
+      }
+      return <GameCountDown game={game} settings={props.game_settings}/>;
+    }}
     />
   )
 }
@@ -325,30 +386,30 @@ const GameScoring = (props) => {
   const classes = useStyles();
   return (
     <QueryRenderer
-      environment={environment}
-      query={reportCheckListQuery}
-      variables = {{}}
-      render={({error, props}) => {
-        if (error) {
-          return <div>Unable to Load</div>;
+    environment={environment}
+    query={reportCheckListQuery}
+    variables = {{}}
+    render={({error, props}) => {
+      if (error) {
+        return <div>Unable to Load</div>;
+      }
+      if (!props) {
+        return <div>Loading...</div>;
+      }
+      let count = 0;
+      let total = 0;
+      props.report_check_list.forEach(item => {
+        if (item.status === "COMPLETE") {
+          count++;
         }
-        if (!props) {
-          return <div>Loading...</div>;
-        }
-        let count = 0;
-        let total = 0;
-        props.report_check_list.forEach(item => {
-          if (item.status === "COMPLETE") {
-            count++;
-          }
-          total++;
-        });
+        total++;
+      });
 
-        return <>
-          <LinearProgress variant="determinate" value={100 * count/total}/>
-          {total - count} out of {total} left
-        </>; 
-      }}
+      return <>
+        <LinearProgress variant="determinate" value={100 * count/total}/>
+        {total - count} out of {total} left
+        </>;
+    }}
     />
   )
 }
@@ -358,44 +419,44 @@ const GameScoreBoard = (props) => {
   const classes = useStyles();
   return (
     <QueryRenderer
-      environment={environment}
-      query={gameScoreQuery}
-      variables = {{id: game.id}}
-      render={({error, props}) => {
-        if (error) {
-          return <div>Unable to Load</div>;
-        }
-        if (!props) {
-          return <div>Loading...</div>;
-        }
-        console.warn(props);
-        return <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Game ID</TableCell>
-              <TableCell>Team ID</TableCell>
-              <TableCell>Player ID</TableCell>
-              <TableCell>Hits Scored</TableCell>
-              <TableCell>Hits Received</TableCell>
-              <TableCell>Survival Time</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {props.game_score.map(item => (
-              <TableRow>
-                <TableCell>{item.id}</TableCell>
-                <TableCell>{item.gameId}</TableCell>
-                <TableCell>{item.ltTeamId}</TableCell>
-                <TableCell>{item.ltPlayerId}</TableCell>
-                <TableCell>{item.totalTagsGiven}</TableCell>
-                <TableCell>{item.totalTagsReceived}</TableCell>
-                <TableCell>{item.survivedTimeSec} seconds</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>;
-      }}
+    environment={environment}
+    query={gameScoreQuery}
+    variables = {{id: game.id}}
+    render={({error, props}) => {
+      if (error) {
+        return <div>Unable to Load</div>;
+      }
+      if (!props) {
+        return <div>Loading...</div>;
+      }
+      console.warn(props);
+      return <><Table size="small">
+        <TableHead>
+        <TableRow>
+        <TableCell>ID</TableCell>
+        <TableCell>Game ID</TableCell>
+        <TableCell>Team ID</TableCell>
+        <TableCell>Player ID</TableCell>
+        <TableCell>Hits Scored</TableCell>
+        <TableCell>Hits Received</TableCell>
+        <TableCell>Survival Time</TableCell>
+        </TableRow>
+        </TableHead>
+        <TableBody>
+        {props.game_score.map(item => (
+          <TableRow>
+          <TableCell>{item.id}</TableCell>
+          <TableCell>{item.gameId}</TableCell>
+          <TableCell>{item.ltTeamId}</TableCell>
+          <TableCell>{item.ltPlayerId}</TableCell>
+          <TableCell>{item.totalTagsGiven}</TableCell>
+          <TableCell>{item.totalTagsReceived}</TableCell>
+          <TableCell>{item.survivedTimeSec} seconds</TableCell>
+          </TableRow>
+        ))}
+        </TableBody>
+        </Table><GameEndButton game={game}/></>;
+    }}
     />
   )
 }
@@ -404,9 +465,7 @@ const GameWizardContent = (props) => {
   switch(props.activeStep) {
     case 0: return <GameTypeSelector/>
     case 1: return <GameSetup game={props.activeGame}/>
-    case 2: return <><GameRegistration game={props.activeGame}/>
-      <GameStartButton game={props.activeGame}/>
-        </>
+    case 2: return <GameRegistration game={props.activeGame}/>
     case 3: return <GameRunning game={props.activeGame}/>
     case 4: return <GameScoring game={props.activeGame}/>
     case 5: return <GameScoreBoard game={props.activeGame}/>

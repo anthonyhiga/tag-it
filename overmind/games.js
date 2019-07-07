@@ -117,6 +117,7 @@ const updateGameState = (id, status) => {
           }
         }})
       ]).then((results) => {
+        console.log('GAME STATE ID: ' + id + ' STATUS: ' + status);
         pubsub.publish(GAMES_UPDATED, {
           games_list: results[0],
           active_games_list: results[1], 
@@ -194,9 +195,6 @@ const finalizeScore = () => {
         pubsub.publish(REPORT_CHECKLIST_UPDATED, {
           report_check_list: getReportItemList()
         });
-
-        console.log("CLEARING GAME MACHINE");
-        delete gameMachineCache[gameId];
       }
     });
   });
@@ -418,6 +416,7 @@ type Mutation {
   joined_player(id: ID!, totemId: ID): Player!
 
   create_game(type: String!, name: String): Game
+  end_game(id: ID!): Game
 
   update_game_settings(id: ID!, settings: GameSettings!): Game
   start_game(id: ID!): Game
@@ -464,11 +463,10 @@ const resolvers = {
   Mutation: {
     file_basic_tag_report: async (root, args, context) => {
       // This is coming from the arbiter 
-      console.warn('GOT BASIC REPORT');
       //console.warn(args.report)
-      // DO SOMETHING W/ THE REPORT
 
       const key = reportItemKey(args.report);
+      console.warn('GOT BASIC REPORT: ' + key); 
       const followUpReports = args.report.followUpReports || [];
       reportBasicScoreCache[key] = args.report;
 
@@ -507,13 +505,12 @@ const resolvers = {
     },
     file_team_tag_report: async (root, args, context) => {
       // This is coming from the arbiter 
-      console.warn('GOT TAG REPORT');
-      // DO SOMETHING W/ THE REPORT
-
+      
       //console.warn(args.report)
       const report = args.report;
 
       const key = reportItemKey(report);
+      console.warn('GOT TAG REPORT: ' + key); 
       reportTeamScoreCache[key] = args.report;
 
       item = reportCheckListCache[key];
@@ -555,6 +552,8 @@ const resolvers = {
       const machine = gameMachineBuilderCache[args.type].build(game);
       gameMachineCache[game.id] = machine;
 
+      console.log("CREATING GAME: " + game.id);
+
       Promise.all([
         Game.findAll(),
         Game.findAll({where: {
@@ -586,6 +585,17 @@ const resolvers = {
         gameMachineCache[args.id].startGame();
       } else {
         console.warn("CANNOT START GAME: " + args.id);
+      }
+      return await Game.findByPk(args.id);
+    },
+    end_game: async (root, args, context) => {
+      // This is coming from a client
+      if (gameMachineCache[args.id]) {
+        gameMachineCache[args.id].endGame();
+        delete gameMachineCache[gameId];
+        console.log("CLEARING GAME MACHINE");
+      } else {
+        console.warn("CANNOT END GAME: " + args.id);
       }
       return await Game.findByPk(args.id);
     },

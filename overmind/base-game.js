@@ -55,6 +55,7 @@ class BaseState {
   onGameSettingsUpdate(settings) { console.warn('UNABLE TO CHANGE GAME SETTINGS'); }
   onStartRegistration() { console.warn('UNABLE TO START REGISTRATION'); }
   onGameStart() { console.warn('UNABLE TO START GAME'); }
+  onGameEnd() { console.warn('UNABLE TO END GAME'); }
   onChannelUpdated(channel) { console.warn('UNABLE TO PROCESS CHANNEL UPDATE'); }
   onRegistrationStart() { console.warn('UNABLE TO START REGISTRATION'); }
   onPlayerJoined(id, totemId) { console.warn('UNABLE ADD PLAYER TO GAME'); }
@@ -68,6 +69,9 @@ class BaseState {
 }
 
 class IdleState extends BaseState {
+  onGameEnd() {
+    games.updateGameState(this.fsm.game.id, 'COMPLETE'); 
+  }
 }
 
 class SetupState extends BaseState {
@@ -82,6 +86,9 @@ class SetupState extends BaseState {
       ...settings
     };
     games.updateGameSettings(this.fsm.settings);
+  }
+  onGameEnd() {
+    games.updateGameState(this.fsm.game.id, 'COMPLETE'); 
   }
 }
 
@@ -309,6 +316,16 @@ class ScoringState extends BaseState {
   onFinalScore(id, finalScore) {
     this.fsm.finish();
   }
+
+  onGameEnd() {
+    games.updateGameState(this.fsm.game.id, 'COMPLETE'); 
+  }
+}
+
+class CompleteState extends BaseState {
+  onGameEnd() {
+    games.updateGameState(this.fsm.game.id, 'COMPLETE'); 
+  }
 }
 
 function buildStateMachine(game) {
@@ -358,7 +375,7 @@ function buildStateMachine(game) {
         'registration': new RegistrationState(),
         'running': new RunningState(),
         'scoring': new ScoringState(),
-        'complete': new BaseState(),
+        'complete': new CompleteState(),
       }
     },
     methods: {
@@ -367,6 +384,9 @@ function buildStateMachine(game) {
       },
       startGame: function() {
         this.getState().onGameStart();
+      },
+      endGame: function() {
+        this.getState().onGameEnd();
       },
       updateSettings: function(settings) {
         this.getState().onGameSettingsUpdate(settings);
