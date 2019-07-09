@@ -10,42 +10,55 @@ import CardMedia from '@material-ui/core/CardMedia';
 import Typography from '@material-ui/core/Typography';
 import Zoom from '@material-ui/core/Zoom';
 
+const avatarWidth = 26;
+const width = 130;
+
 const useStyles = makeStyles({
   unknown: {
-    maxWidth: 345,
+    width,
   },
   solocard: {
     backgroundColor: 'orange',
-    maxWidth: 345,
+    width,
   },
   idlecard: {
     backgroundColor: 'grey',
-    maxWidth: 345,
+    width,
   },
   joiningcard: {
     backgroundColor: 'white',
-    maxWidth: 345,
+    width,
   },
   activecard: {
     backgroundColor: '#e5e3fc',
-    maxWidth: 345,
+    width,
   },
   media: {
-    height: 140,
+    height: 80,
   },
   avatar: {
+    width: avatarWidth,
+    height: avatarWidth,
   },
   soloavatar: {
     backgroundColor: 'orange',
+    width: avatarWidth,
+    height: avatarWidth,
   },
   team1avatar: {
     backgroundColor: 'red',
+    width: avatarWidth,
+    height: avatarWidth,
   },
   team2avatar: {
     backgroundColor: 'blue',
+    width: avatarWidth,
+    height: avatarWidth,
   },
   team3avatar: {
     backgroundColor: 'yellow',
+    width: avatarWidth,
+    height: avatarWidth,
   },
 });
 
@@ -97,12 +110,6 @@ export default function GamePlayerCard(props) {
         image={avatarUrl || iconUrl}
         title={name}
       />
-      <Typography variant="body2" color="textSecondary" component="p">
-        Player Id: {ltPlayerId}
-      </Typography>
-      <Typography variant="body2" color="textSecondary" component="p">
-        Totem Id: {totemId}
-      </Typography>
       </CardContent>
       </CardActionArea>
       </Card>

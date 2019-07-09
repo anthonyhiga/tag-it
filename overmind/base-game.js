@@ -24,7 +24,7 @@ const DEFAULT_GAME_SETTINGS = {
   },
   reportTimeLimitSec: 180,
   reportDelaySec: 1,
-  countDownSec: 20,
+  countDownSec: 10,
   gameLengthInMin: 1, // five minute game
   health: 5,   // 20 tags
   reloads: 100, // infinite

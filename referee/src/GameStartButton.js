@@ -38,6 +38,6 @@ export default function GameStartButton(props) {
     };
 
     return (
-      <Button color="primary" variant="contained" onClick={click}>Start Game</Button>
+      <Button variant="contained" onClick={click}>Start Game</Button>
     );
 }

@@ -161,6 +161,7 @@ type Query {
   game(id: ID!): Game
   active_games_list: [Game]
   game_settings(id: ID!): CurrentGameSettings
+  game_players_list(id: ID!): [Player]
 }
 
 type ReportCheckListItem {
@@ -186,6 +187,7 @@ enum ReportType {
 type Subscription {
   arbiter_settings_updated(id: ID!): ArbiterSettings
   arbiter_active_commands(id: ID!): [ArbiterCommand]
+  game_settings: CurrentGameSettings
   game_score(id: ID!): [GamePlayerScore]
   report_check_list: [ReportCheckListItem]
   games_list: [Game]

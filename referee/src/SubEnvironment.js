@@ -8,7 +8,7 @@ import {
 import { SubscriptionClient } from 'subscriptions-transport-ws'
 
 const fetchQuery = (operation, variables) => {
-  return fetch('http://192.168.10.166:4000/graphql', {
+  return fetch('http://192.168.10.136:4000/graphql', {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
@@ -26,7 +26,7 @@ const fetchQuery = (operation, variables) => {
 const setupSubscription = (config, variables, cacheConfig, observer) => {
   const query = config.text
   const subscriptionClient =
-    new SubscriptionClient('ws://192.168.10.166:4000/graphql', {
+    new SubscriptionClient('ws://192.168.10.136:4000/graphql', {
       reconnect: true
     })
 

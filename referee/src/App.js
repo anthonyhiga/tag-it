@@ -32,65 +32,10 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-
-/*
-const query = graphql`
-query AppGameTypes {
-  game_types_list {
-    type
-    name
-    description
-  }
-}
-`;
-
-/*
-      <header className="App-header">
-        <Button raised className='button-alternate'
-          onClick={() => console.log('clicked!')}>
-          Click Me!
-        </Button>
-        <QueryRenderer
-             environment={environment}
-             query={query}
-             variables = {{id: 17}}
-             render={({error, props}) => {
-                 if (error) {
-                     return <div>Error! {error.toString()}</div>;
-                 }
-                 if (!props) {
-                     return <div>Loading...</div>;
-                 }
-                 return <div>
-                   {
-                     props.game_score.map((score) => {
-                       return <Score score={score}/>
-                     })
-                   }
-                 </div>;
-             }}
-          />
-
-      </header>
-      */
-
 function App() {
   const classes = useStyles();
   return (
-    <>
-    <AppBar position="static">
-      <Toolbar>
-        <IconButton edge="start"
-           className={classes.menuButton} color="inherit" aria-label="Menu">
-          <MenuIcon />
-        </IconButton>
-        <Typography variant="h6" className={classes.title}>
-          Tag-It Referee 
-        </Typography>
-      </Toolbar>
-    </AppBar>
     <GameWizard className={classes.wizard}/>
-    </>
   );
 }
 

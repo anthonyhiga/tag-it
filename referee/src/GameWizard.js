@@ -1,16 +1,21 @@
 import React from 'react';
-import {QueryRenderer, requestSubscription} from 'react-relay';
+import {QueryRenderer, requestSubscription, commitMutation} from 'react-relay';
 import graphql from 'babel-plugin-relay/macro';
 
 import environment from './SubEnvironment.js';
 
 import { makeStyles } from '@material-ui/core/styles';
+import AppBar from '@material-ui/core/AppBar';
+import Toolbar from '@material-ui/core/Toolbar';
+import Avatar from '@material-ui/core/Avatar';
+import Radio from '@material-ui/core/Radio';
+import RadioGroup from '@material-ui/core/RadioGroup';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import Container from '@material-ui/core/Container';
 import LinearProgress from '@material-ui/core/LinearProgress';
 import Grid from '@material-ui/core/Grid';
-import Stepper from '@material-ui/core/Stepper';
+import MobileStepper from '@material-ui/core/MobileStepper';
 import Step from '@material-ui/core/Step';
 import StepLabel from '@material-ui/core/StepLabel';
 import Table from '@material-ui/core/Table';
@@ -22,7 +27,9 @@ import TableRow from '@material-ui/core/TableRow';
 import InputLabel from '@material-ui/core/InputLabel';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
+import FormLabel from '@material-ui/core/FormLabel';
 import FormControl from '@material-ui/core/FormControl';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 import TextField from '@material-ui/core/TextField';
 
 import GameTypeCard from './GameTypeCard';
@@ -48,6 +55,14 @@ query GameWizardGameTypesQuery {
   }
 }
 `
+
+const updateSettingsMutation = graphql`
+mutation GameWizardUpdateSettingsMutation($id: ID!, $settings: GameSettings!) {
+  update_game_settings(id: $id, settings: $settings) {
+    id
+  }
+}
+`;
 
 const gameSettingsQuery = graphql`
 query GameWizardGameSettingsQuery($id: ID!) {
@@ -120,6 +135,16 @@ query GameWizardGameScoreQuery($id: ID!) {
     ltTeamId
     ltPlayerId
   }
+  game_players_list(id: $id) {
+    id
+    status
+    ltTeamId
+    ltPlayerId
+    name
+    totemId
+    avatarUrl
+    iconUrl
+  }
 }
 `;
 
@@ -177,7 +202,7 @@ const useStyles = makeStyles(theme => ({
 function Transition(props) {
   return (<Slide direction="left" in={true} mountOnEnter unmountOnExit>
     {props.children}
-  </Slide>);
+    </Slide>);
 }
 
 function getSteps() {
@@ -195,7 +220,11 @@ function WizardStepper(props) {
   const steps = getSteps();
 
   return (
-    <Stepper activeStep={props.activeStep}>
+    <MobileStepper 
+    steps={steps.length}
+    variant="text"
+    position="static"
+    activeStep={props.activeStep}>
     {steps.map((label, index) => {
       const stepProps = {};
       const labelProps = {};
@@ -205,7 +234,7 @@ function WizardStepper(props) {
         </Step>
       );
     })}
-    </Stepper>
+    </MobileStepper>
   );
 }
 
@@ -216,15 +245,15 @@ const GameTypeSelector = (props) => {
     variables = {{}}
     render={({error, props}) => {
       if (error) {
-        return <div>Unable to Load</div>;
+        return null;
       }
       if (!props) {
-        return <div>Loading...</div>;
+        return null;
       }
-      return <Grid container spacing={3}>
+      return <Grid container spacing={5} justify="space-around">
         {
           props.game_types_list.map((gameType) => {
-            return <Grid item xs={2}>
+            return <Grid item xs>
               <GameTypeCard gameType={gameType}/>
               </Grid>;
           })
@@ -234,11 +263,125 @@ const GameTypeSelector = (props) => {
     />);
 }
 
+const updateSettings = (id, settings) => {
+  commitMutation(environment, {mutation: updateSettingsMutation, variables: {id, settings}}); 
+}
+
+const parseValue = (value, max) => {
+  if (value == null) {
+    return "";
+  }
+  if (value === "") {
+    return "";
+  }
+  const result = parseInt(value, 10);
+  if (isNaN(result)) {
+    return "";
+  }
+  if (result > max) {
+    return max;
+  }
+  return result;
+}
+
+const GameSettingsEditor = (props) => {
+  const settings = props.settings;
+  if (settings == null) {
+    return null;
+  }
+
+  const ns = {...settings};
+
+  let team = "solo";
+  const totalTeams = settings.totalTeams;
+  if (totalTeams == 2) {
+    team = "2"
+  } else if (totalTeams == 3) {
+    team = "3"
+  }
+
+  return (
+        <Box display="flex" height={400} flexDirection="row">
+          <Box display="flex" flexDirection="column">
+            <TextField
+             onChange={(event) => {
+               ns.gameLengthInMin = parseValue(event.target.value, 30);
+               props.setSettings(ns);
+             }}
+             value={settings.gameLengthInMin} label="Game Length (min)"  variant="outlined"/>
+            <Box height={10}/>
+            <TextField
+             onChange={(event) => {
+               ns.health = parseValue(event.target.value, 99);
+               props.setSettings(ns);
+             }}
+             value={settings.health} label="Health" variant="outlined"/>
+            <Box height={10}/>
+            <TextField
+             onChange={(event) => {
+               ns.reloads = parseValue(event.target.value, 99);
+               props.setSettings(ns);
+             }}
+             value={settings.reloads}  label="Reloads" variant="outlined"/>
+            <Box height={10}/>
+            <TextField
+             onChange={(event) => {
+               ns.shields = parseValue(event.target.value, 99);
+               props.setSettings(ns);
+             }}
+             value={settings.shields} label="Shields" variant="outlined"/>
+            <Box height={10}/>
+            <TextField
+             onChange={(event) => {
+               ns.megatags = parseValue(event.target.value, 99);
+               props.setSettings(ns);
+             }}
+             value={settings.megatags} label="Mega-tags" variant="outlined"/>
+          </Box>
+          <Box flexGrow={1}/>
+          <Box>
+            <Box border={1} borderColor="grey.400" borderRadius="3%" padding={2} width={200}> 
+        <FormControl component="fieldset">
+        <Box paddingBottom={2} paddingTop={1}>
+        <FormLabel component="legend" paddingBottom={10}>Total Teams</FormLabel>
+        </Box>
+        <RadioGroup
+        aria-label="Total Teams"
+        name="totalTeams"
+        onChange={(event) => {
+          if (event.target.value === "solo") {
+            ns.totalTeams = 0
+            props.setSettings(ns);
+          }
+          if (event.target.value === "2") {
+            ns.totalTeams = 2
+            props.setSettings(ns);
+          }
+          if (event.target.value === "3") {
+            ns.totalTeams = 3
+            props.setSettings(ns);
+          }
+        }}
+        value={team}
+        >
+        <FormControlLabel value="solo" control={<Radio />} label="Solo" />
+        <FormControlLabel value="2" control={<Radio />} label="2 Teams" />
+        <FormControlLabel value="3" control={<Radio />} label="3 Teams" />
+        </RadioGroup>
+        </FormControl>
+            </Box>
+          </Box>
+        </Box>
+  );
+}
+
 const GameSetup = (props) => {
+  const [settings, setSettings] = useState(null);
+  const game = props.game;
   const classes = useStyles();
   return (
-    <Transition>
-    <Box display="flex" flexDirection="column" minHeight={300}> 
+    <>
+    <Box display="flex" flexDirection="column" minHeight={300}>
     <Box flexGrow={1}>
     <Grid alignContent={'flex-end'} className={classes.container}>
     <QueryRenderer
@@ -252,39 +395,31 @@ const GameSetup = (props) => {
       if (!props) {
         return <div>Loading...</div>;
       }
+      if (settings == null) {
+        setSettings(props.game_settings);
+      }
+
       return (
-        <Grid container spacing={3}>
-        <Grid item xs={2}>
-        <TextField label="Game Length (min)" />
-        </Grid>
-        <Grid item xs={2}>
-        <TextField label="Health" />
-        </Grid>
-        <Grid item xs={2}>
-        <TextField label="Reloads" />
-        </Grid>
-        <Grid item xs={2}>
-        <TextField label="Shields" />
-        </Grid>
-        <Grid item xs={2}>
-        <TextField label="Megatags" />
-        </Grid>
-        <Grid item xs={2}>
-        <TextField label="Total Teams" />
-        </Grid>
-        </Grid>
+        <GameSettingsEditor settings={settings} setSettings={(value) => {
+          setSettings(value);
+          updateSettings(game.id, value);
+        }}/>
       );
     }}
     />
     </Grid>
     </Box>
-    <Box/>
-    <Box alignItems="flex-end" selfAlign="flex-end" display="flex"> 
-    <Box flexGrow={1}/>
-    <GameStartRegistrationButton game={props.game}/>
     </Box>
-    </Box>
-    </Transition>
+    <AppBar position="fixed" color="primary" style={{
+            top: 'auto',
+            bottom: 0,
+    }}>
+    <Toolbar>
+      <Box flexGrow={1}/>
+        <GameStartRegistrationButton game={game}/>
+    </Toolbar>
+    </AppBar>
+    </>
   )
 }
 
@@ -292,9 +427,7 @@ const GameRegistration = (props) => {
   const game = props.game;
   const classes = useStyles();
   return (
-    <Transition>
-    <Box display="flex" flexDirection="column" minHeight={300}> 
-    <Box>
+    <>
     <QueryRenderer
     environment={environment}
     query={activePlayersQuery}
@@ -306,26 +439,33 @@ const GameRegistration = (props) => {
       if (!props) {
         return <div>Loading...</div>;
       }
-      return <Grid container spacing={3}>
+      const players = [...props.active_players_list];
+      players.sort((a, b) => (
+        a.ltTeamId - b.ltTeamId || a.ltPlayerId - b.ltPlayerId
+      ));
+      return <Transition>
+        <Grid container justify="space-around">
         {
-          props.active_players_list.map((player) => {
-            console.log(player)
-            return <Grid item xs={3}>
+          players.map((player) => {
+            return <Grid item xs>
               <GamePlayerCard player={player}/>
               </Grid>;
           })
         }
-        </Grid>;
+        </Grid>
+        </Transition>
     }}
     />
-    </Box>
-    <Box/>
-    <Box alignItems="flex-end" selfAlign="flex-end" display="flex"> 
-    <Box flexGrow={1}/>
-    <GameStartButton game={game}/>
-    </Box>
-    </Box>
-    </Transition>
+    <AppBar position="fixed" color="primary" style={{
+            top: 'auto',
+            bottom: 0,
+    }}>
+    <Toolbar>
+      <Box flexGrow={1}/>
+      <GameStartButton edge="end" game={game}/>
+    </Toolbar>
+    </AppBar>
+    </>
   );
 }
 
@@ -353,10 +493,10 @@ const GameCountDown = (props => {
   if (timePassed < countDown) {
     const countDownLeft = (countDown - timePassed);
     const timeString = new Date(countDownLeft).toISOString().substr(17, 2);
-    return <>{timeString}</>;
+    return <Box fontSize={250} justifyContent="center" display="flex">{timeString}</Box>;
   } else {
     const timeString = new Date(timeLeft).toISOString().substr(14, 5);
-    return <>{timeString}</>;
+    return <Box fontSize={250} justifyContent="center" display="flex">{timeString}</Box>;
   }
 })
 
@@ -418,6 +558,7 @@ const GameScoreBoard = (props) => {
   const game = props.game;
   const classes = useStyles();
   return (
+    <>
     <QueryRenderer
     environment={environment}
     query={gameScoreQuery}
@@ -429,12 +570,16 @@ const GameScoreBoard = (props) => {
       if (!props) {
         return <div>Loading...</div>;
       }
-      console.warn(props);
+      const playerMap = {};
+      props.game_players_list.forEach(item => {
+        playerMap[item.id] = item;
+      });
+      const gameScore = [...props.game_score];
       return <><Table size="small">
         <TableHead>
         <TableRow>
         <TableCell>ID</TableCell>
-        <TableCell>Game ID</TableCell>
+        <TableCell>Name</TableCell>
         <TableCell>Team ID</TableCell>
         <TableCell>Player ID</TableCell>
         <TableCell>Hits Scored</TableCell>
@@ -443,10 +588,10 @@ const GameScoreBoard = (props) => {
         </TableRow>
         </TableHead>
         <TableBody>
-        {props.game_score.map(item => (
+        {gameScore.map(item => (
           <TableRow>
-          <TableCell>{item.id}</TableCell>
-          <TableCell>{item.gameId}</TableCell>
+          <TableCell>{item.playerId}</TableCell>
+          <TableCell>{playerMap[item.playerId].name}</TableCell>
           <TableCell>{item.ltTeamId}</TableCell>
           <TableCell>{item.ltPlayerId}</TableCell>
           <TableCell>{item.totalTagsGiven}</TableCell>
@@ -455,9 +600,20 @@ const GameScoreBoard = (props) => {
           </TableRow>
         ))}
         </TableBody>
-        </Table><GameEndButton game={game}/></>;
+        </Table>
+        </>;
     }}
     />
+    <AppBar position="fixed" color="primary" style={{
+            top: 'auto',
+            bottom: 0,
+    }}>
+    <Toolbar>
+      <Box flexGrow={1}/>
+      <GameEndButton game={game}/>
+    </Toolbar>
+    </AppBar>
+    </>
   )
 }
 
@@ -489,8 +645,6 @@ const GameWizardSteps = (props) => {
 
     const activeGame = props.active_games_list.length > 0 ? props.active_games_list[0] : null;
     let activeStep = 0;
-
-    console.warn(activeGame);
 
     if (activeGame && activeGame.status === 'SETUP') {
       activeStep = 1;

@@ -11,6 +11,7 @@ const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
 const PLAYERS_UPDATED = 'PLAYERS_UPDATED';
 const GAMES_UPDATED = 'GAMES_UPDATED';
+const SETTINGS_UPDATED = 'SETTINGS_UPDATED';
 const REPORT_CHECKLIST_UPDATED = 'REPORT_CHECKLIST_UPDATED';
 const GAME_SCORE_UPDATED = 'GAME_SCORE_UPDATED';
 
@@ -160,8 +161,18 @@ const finalizeScore = () => {
     const value = reportBasicScoreCache[key];
     const id = value.ltTeamId + ":" + value.ltPlayerId;
     gameId = value.gameId;
+    playerId = null;
+    for (playerIndex in playersCache) {
+      const player = playersCache[playerIndex];
+      if (player.ltTeamId == value.ltTeamId
+        && player.ltPlayerId == value.ltPlayerId) {
+        playerId = player.id
+      }
+    }
+
     const score = {
       gameId: value.gameId,
+      playerId: playerId,
       ltGameId: value.ltGameId,
       ltTeamId: value.ltTeamId,
       ltPlayerId: value.ltPlayerId,
@@ -268,6 +279,9 @@ const forceSubscriptionUpdate = () => {
     });
     pubsub.publish(PLAYERS_UPDATED, {
       active_players_list: playersCache,
+    });
+    pubsub.publish(SETTINGS_UPDATED, {
+      game_settings: gameSettings,
     });
   });
 };
@@ -400,9 +414,11 @@ type Query {
   game(id: ID!): Game
   active_games_list: [Game]
   game_settings(id: ID!): CurrentGameSettings
+  game_players_list(id: ID!): [Player]
 }
 
 type Subscription {
+  game_settings: CurrentGameSettings
   game_score(id: ID!): [GamePlayerScore]
   report_check_list: [ReportCheckListItem]
   games_list: [Game]
@@ -447,6 +463,10 @@ const resolvers = {
     },
     games_list: async (root, args, context) => {
       return await Game.findAll();
+    },
+    game_players_list: async (root, args, context) => {
+      // For now we'll return the active cache
+      return playersCache;
     },
     active_games_list: async (root, args, context) => {
       return await Game.findAll({where: {
@@ -577,6 +597,9 @@ const resolvers = {
       } else {
         console.warn("CANNOT UPDATE GAME SETTINGS: " + args.id);
       }
+      pubsub.publish(SETTINGS_UPDATED, {
+        game_settings: gameSettings,
+      });
       return await Game.findByPk(args.id);
     },
     start_game: async (root, args, context) => {
@@ -628,6 +651,9 @@ const resolvers = {
     },
     report_check_list: {
       subscribe: () => pubsub.asyncIterator([REPORT_CHECKLIST_UPDATED])
+    },
+    game_settings: {
+      subscribe: () => pubsub.asyncIterator([SETTINGS_UPDATED])
     },
     games_list: {
       subscribe: () => pubsub.asyncIterator([GAMES_UPDATED])

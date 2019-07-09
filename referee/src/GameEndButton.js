@@ -38,6 +38,6 @@ export default function GameEndButton(props) {
     };
 
     return (
-      <Button color="primary" variant="contained" onClick={click}>End Game</Button>
+      <Button variant="contained" onClick={click}>End Game</Button>
     );
 }

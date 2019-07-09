@@ -1,6 +1,6 @@
 /**
  * @flow
- * @relayHash a69797a01e1f273fa7c4ff56b3e6f932
+ * @relayHash 6b22574d14de67e93a14567c0317894b
  */
 
 /* eslint-disable */
@@ -9,6 +9,7 @@
 
 /*::
 import type { ConcreteRequest } from 'relay-runtime';
+export type PlayerStatus = "ACTIVE" | "IDLE" | "JOINING" | "%future added value";
 export type GameWizardGameScoreQueryVariables = {|
   id: string
 |};
@@ -25,7 +26,17 @@ export type GameWizardGameScoreQueryResponse = {|
     +ltGameId: string,
     +ltTeamId: string,
     +ltPlayerId: string,
-  |}>
+  |}>,
+  +game_players_list: ?$ReadOnlyArray<?{|
+    +id: string,
+    +status: PlayerStatus,
+    +ltTeamId: ?string,
+    +ltPlayerId: ?string,
+    +name: ?string,
+    +totemId: string,
+    +avatarUrl: string,
+    +iconUrl: string,
+  |}>,
 |};
 export type GameWizardGameScoreQuery = {|
   variables: GameWizardGameScoreQueryVariables,
@@ -51,6 +62,16 @@ query GameWizardGameScoreQuery(
     ltTeamId
     ltPlayerId
   }
+  game_players_list(id: $id) {
+    id
+    status
+    ltTeamId
+    ltPlayerId
+    name
+    totemId
+    avatarUrl
+    iconUrl
+  }
 }
 */
 
@@ -65,27 +86,43 @@ var v0 = [
 ],
 v1 = [
   {
+    "kind": "Variable",
+    "name": "id",
+    "variableName": "id"
+  }
+],
+v2 = {
+  "kind": "ScalarField",
+  "alias": null,
+  "name": "id",
+  "args": null,
+  "storageKey": null
+},
+v3 = {
+  "kind": "ScalarField",
+  "alias": null,
+  "name": "ltTeamId",
+  "args": null,
+  "storageKey": null
+},
+v4 = {
+  "kind": "ScalarField",
+  "alias": null,
+  "name": "ltPlayerId",
+  "args": null,
+  "storageKey": null
+},
+v5 = [
+  {
     "kind": "LinkedField",
     "alias": null,
     "name": "game_score",
     "storageKey": null,
-    "args": [
-      {
-        "kind": "Variable",
-        "name": "id",
-        "variableName": "id"
-      }
-    ],
+    "args": (v1/*: any*/),
     "concreteType": "GamePlayerScore",
     "plural": true,
     "selections": [
-      {
-        "kind": "ScalarField",
-        "alias": null,
-        "name": "id",
-        "args": null,
-        "storageKey": null
-      },
+      (v2/*: any*/),
       {
         "kind": "ScalarField",
         "alias": null,
@@ -142,17 +179,54 @@ v1 = [
         "args": null,
         "storageKey": null
       },
+      (v3/*: any*/),
+      (v4/*: any*/)
+    ]
+  },
+  {
+    "kind": "LinkedField",
+    "alias": null,
+    "name": "game_players_list",
+    "storageKey": null,
+    "args": (v1/*: any*/),
+    "concreteType": "Player",
+    "plural": true,
+    "selections": [
+      (v2/*: any*/),
       {
         "kind": "ScalarField",
         "alias": null,
-        "name": "ltTeamId",
+        "name": "status",
+        "args": null,
+        "storageKey": null
+      },
+      (v3/*: any*/),
+      (v4/*: any*/),
+      {
+        "kind": "ScalarField",
+        "alias": null,
+        "name": "name",
         "args": null,
         "storageKey": null
       },
       {
         "kind": "ScalarField",
         "alias": null,
-        "name": "ltPlayerId",
+        "name": "totemId",
+        "args": null,
+        "storageKey": null
+      },
+      {
+        "kind": "ScalarField",
+        "alias": null,
+        "name": "avatarUrl",
+        "args": null,
+        "storageKey": null
+      },
+      {
+        "kind": "ScalarField",
+        "alias": null,
+        "name": "iconUrl",
         "args": null,
         "storageKey": null
       }
@@ -167,23 +241,23 @@ return {
     "type": "Query",
     "metadata": null,
     "argumentDefinitions": (v0/*: any*/),
-    "selections": (v1/*: any*/)
+    "selections": (v5/*: any*/)
   },
   "operation": {
     "kind": "Operation",
     "name": "GameWizardGameScoreQuery",
     "argumentDefinitions": (v0/*: any*/),
-    "selections": (v1/*: any*/)
+    "selections": (v5/*: any*/)
   },
   "params": {
     "operationKind": "query",
     "name": "GameWizardGameScoreQuery",
     "id": null,
-    "text": "query GameWizardGameScoreQuery(\n  $id: ID!\n) {\n  game_score(id: $id) {\n    id\n    gameId\n    teamId\n    playerId\n    totalTagsReceived\n    totalTagsGiven\n    survivedTimeSec\n    zoneTimeSec\n    ltGameId\n    ltTeamId\n    ltPlayerId\n  }\n}\n",
+    "text": "query GameWizardGameScoreQuery(\n  $id: ID!\n) {\n  game_score(id: $id) {\n    id\n    gameId\n    teamId\n    playerId\n    totalTagsReceived\n    totalTagsGiven\n    survivedTimeSec\n    zoneTimeSec\n    ltGameId\n    ltTeamId\n    ltPlayerId\n  }\n  game_players_list(id: $id) {\n    id\n    status\n    ltTeamId\n    ltPlayerId\n    name\n    totemId\n    avatarUrl\n    iconUrl\n  }\n}\n",
     "metadata": {}
   }
 };
 })();
 // prettier-ignore
-(node/*: any*/).hash = 'bdce58656439ada45d66b5e9c9b001eb';
+(node/*: any*/).hash = '3fcb610d7ea26ef68b68b7ccd8f48c0b';
 module.exports = node;

@@ -27,6 +27,6 @@ export default function GameStartRegistrationButton(props) {
     };
 
     return (
-      <Button color="primary" variant="contained" onClick={click}>Start Registration</Button>
+      <Button variant="contained" onClick={click}>Start Registration</Button>
     );
 }
