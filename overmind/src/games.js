@@ -3,21 +3,21 @@
  * Game Infrastructure
  *
  */
-const { gql, PubSub, withFilter} = require('apollo-server');
-const { makeExecutableSchema } = require('graphql-tools');
-const {Game, GamePlayerScore} = require("./models");
-const Sequelize = require('sequelize');
+const { gql, PubSub, withFilter } = require("apollo-server");
+const { makeExecutableSchema } = require("graphql-tools");
+const { Game, GamePlayerScore } = require("./models");
+const Sequelize = require("sequelize");
 
 const Op = Sequelize.Op;
-const PLAYERS_UPDATED = 'PLAYERS_UPDATED';
-const GAMES_UPDATED = 'GAMES_UPDATED';
-const SETTINGS_UPDATED = 'SETTINGS_UPDATED';
-const REPORT_CHECKLIST_UPDATED = 'REPORT_CHECKLIST_UPDATED';
-const GAME_SCORE_UPDATED = 'GAME_SCORE_UPDATED';
+const PLAYERS_UPDATED = "PLAYERS_UPDATED";
+const GAMES_UPDATED = "GAMES_UPDATED";
+const SETTINGS_UPDATED = "SETTINGS_UPDATED";
+const REPORT_CHECKLIST_UPDATED = "REPORT_CHECKLIST_UPDATED";
+const GAME_SCORE_UPDATED = "GAME_SCORE_UPDATED";
 
 function genId() {
-  min = Math.ceil(0);
-  max = Math.floor(256);
+  const min = Math.ceil(0);
+  const max = Math.floor(256);
   return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
 }
 
@@ -31,100 +31,110 @@ let finalizingScore = false;
 /*
  * Boot up persistence layer
  */
-let sequelize = null;
-const initialize = (db) => {
-  sequelize = db;
-};
 
-const gameMachineCache = {}; 
-const gameMachineBuilderCache = {}; 
-const registerGameMachine = (machineBuilder) => {
+const gameMachineCache = {};
+const gameMachineBuilderCache = {};
+const registerGameMachine = machineBuilder => {
   gameMachineBuilderCache[machineBuilder.type] = machineBuilder;
 };
 
 let handlers = {};
 const addHandler = (id, name, method) => {
   handlers[name] = method;
-}
+};
 
-const removeHandlers = (id) => {
+const removeHandlers = id => {
   handlers = {};
 };
 
 // Private PUBSUB for Arbiters
 const pubsub = new PubSub();
 
-const reportItemKey = (item) => {
-  return item.gameId + ":"
-    + item.ltGameId + ":"
-    + item.ltTeamId + ":"
-    + item.ltPlayerId + ":"
-    + (item.ltTagTeamId == null ? "" : item.ltTagTeamId);
-}
+const reportItemKey = item => {
+  return (
+    item.gameId +
+    ":" +
+    item.ltGameId +
+    ":" +
+    item.ltTeamId +
+    ":" +
+    item.ltPlayerId +
+    ":" +
+    (item.ltTagTeamId == null ? "" : item.ltTagTeamId)
+  );
+};
 
 const getReportItemList = () => {
-  return Object.keys(reportCheckListCache).sort().map((key) => reportCheckListCache[key]);
-}
+  return Object.keys(reportCheckListCache)
+    .sort()
+    .map(key => reportCheckListCache[key]);
+};
 
 const cleanUpOldGames = () => {
-  Game.findAll({where: {
-    status: {
-      [Op.ne]: 'COMPLETE'
+  Game.findAll({
+    where: {
+      status: {
+        [Op.ne]: "COMPLETE"
+      }
     }
-  }}).then((games) => {
-    games.forEach((game) => {
-      game.status = 'COMPLETE';
+  }).then(games => {
+    games.forEach(game => {
+      game.status = "COMPLETE";
       game.completedAt = new Date();
       game.save();
     });
   });
-}
+};
 
 let gameSettings = {};
-const updateGameSettings = (settings) => {
-  console.warn('UPDATED SETTINGS');
+const updateGameSettings = settings => {
+  console.warn("UPDATED SETTINGS");
   gameSettings = settings;
-}
+};
 
 let playersCache = [];
-const updatePlayers = (players) => {
+const updatePlayers = players => {
   playersCache = players;
 
   pubsub.publish(PLAYERS_UPDATED, {
-    active_players_list: playersCache,
+    active_players_list: playersCache
   });
-}
+};
 
 const updateGameState = (id, status) => {
-  return Game.findByPk(id).then(game => {
-    if (game != null) {
-      game.status = status;
-      if (status === "RUNNING") {
-        game.startedAt = new Date();
+  return Game.findByPk(id)
+    .then(game => {
+      if (game != null) {
+        game.status = status;
+        if (status === "RUNNING") {
+          game.startedAt = new Date();
+        }
+        if (status === "AWARDS") {
+          game.completedAt = new Date();
+        }
+        return game.save();
       }
-      if (status === "AWARDS") {
-        game.completedAt = new Date();
-      }
-      return game.save();
-    }
 
-    return game;
-  }).then(() => {
+      return game;
+    })
+    .then(() => {
       return Promise.all([
         Game.findAll(),
-        Game.findAll({where: {
-          status: {
-            [Op.ne]: 'COMPLETE'
+        Game.findAll({
+          where: {
+            status: {
+              [Op.ne]: "COMPLETE"
+            }
           }
-        }})
-      ]).then((results) => {
-        console.log('GAME STATE ID: ' + id + ' STATUS: ' + status);
+        })
+      ]).then(results => {
+        console.log("GAME STATE ID: " + id + " STATUS: " + status);
         pubsub.publish(GAMES_UPDATED, {
           games_list: results[0],
-          active_games_list: results[1], 
+          active_games_list: results[1]
         });
       });
-  });
+    });
 };
 
 const finalizeScore = () => {
@@ -134,7 +144,7 @@ const finalizeScore = () => {
 
   finalizingScore = true;
 
-  if(scoringTimer) {
+  if (scoringTimer) {
     clearTimeout(scoringTimer);
     scoringTimer = null;
   }
@@ -161,12 +171,14 @@ const finalizeScore = () => {
     const value = reportBasicScoreCache[key];
     const id = value.ltTeamId + ":" + value.ltPlayerId;
     gameId = value.gameId;
-    playerId = null;
-    for (playerIndex in playersCache) {
+    let playerId = null;
+    for (const playerIndex in playersCache) {
       const player = playersCache[playerIndex];
-      if (player.ltTeamId == value.ltTeamId
-        && player.ltPlayerId == value.ltPlayerId) {
-        playerId = player.id
+      if (
+        player.ltTeamId == value.ltTeamId &&
+        player.ltPlayerId == value.ltPlayerId
+      ) {
+        playerId = player.id;
       }
     }
 
@@ -179,7 +191,7 @@ const finalizeScore = () => {
       zoneTimeSec: value.zoneTimeSec,
       survivedTimeSec: value.survivedTimeSec,
       totalTagsReceived: value.tagsReceived,
-      totalTagsGiven: ltTagsGiven[id] || 0,
+      totalTagsGiven: ltTagsGiven[id] || 0
     };
     finalScore.push(score);
     created.push(GamePlayerScore.create(score));
@@ -189,11 +201,11 @@ const finalizeScore = () => {
     console.info("FINISHED RECORDING SCORES");
     GamePlayerScore.findAll({
       where: { gameId: gameId }
-    }).then((scores) => {
+    }).then(scores => {
       console.info("PUBLISHING SCORES");
       pubsub.publish(GAME_SCORE_UPDATED, {
         game_id: gameId,
-        game_score: scores,
+        game_score: scores
       });
 
       if (handlers.onFinalScore) {
@@ -209,21 +221,21 @@ const finalizeScore = () => {
       }
     });
   });
-}
+};
 
 const checkAndFinalizeScore = () => {
   // We'll trigger this every time we get a report
   // if done, we'll finish up.  If not, we'll exit
-  for (const key in reportCheckListCache){
-    if (reportCheckListCache.hasOwnProperty(key)){
-      if (reportCheckListCache[key].status !== 'COMPLETE') {
+  for (const key in reportCheckListCache) {
+    if (reportCheckListCache.hasOwnProperty(key)) {
+      if (reportCheckListCache[key].status !== "COMPLETE") {
         return;
       }
     }
   }
 
   finalizeScore();
-}
+};
 
 /*
  * We will need to refactor this later to support
@@ -240,7 +252,7 @@ const scoreGame = (reportItems, timeLimitMs) => {
   reportBasicScoreCache = {};
   reportTeamScoreCache = {};
 
-  reportItems.forEach((item) => {
+  reportItems.forEach(item => {
     const key = reportItemKey(item);
     reportCheckListCache[key] = {
       gameId: item.gameId,
@@ -248,8 +260,8 @@ const scoreGame = (reportItems, timeLimitMs) => {
       ltTeamId: item.ltTeamId,
       ltPlayerId: item.ltPlayerId,
       ltTagTeamId: null,
-      type: 'BASIC',
-      status: 'PENDING'
+      type: "BASIC",
+      status: "PENDING"
     };
   });
 
@@ -264,24 +276,26 @@ const scoreGame = (reportItems, timeLimitMs) => {
   }, 2000);
 };
 
-const forceSubscriptionUpdate = () => { 
+const forceSubscriptionUpdate = () => {
   Promise.all([
     Game.findAll(),
-    Game.findAll({where: {
-      status: {
-        [Op.ne]: 'COMPLETE'
+    Game.findAll({
+      where: {
+        status: {
+          [Op.ne]: "COMPLETE"
+        }
       }
-    }})
-  ]).then((results) => {
+    })
+  ]).then(results => {
     pubsub.publish(GAMES_UPDATED, {
       games_list: results[0],
-      active_games_list: results[1], 
+      active_games_list: results[1]
     });
     pubsub.publish(PLAYERS_UPDATED, {
-      active_players_list: playersCache,
+      active_players_list: playersCache
     });
     pubsub.publish(SETTINGS_UPDATED, {
-      game_settings: gameSettings,
+      game_settings: gameSettings
     });
   });
 };
@@ -289,37 +303,37 @@ const forceSubscriptionUpdate = () => {
 // Type definitions define the "shape" of your data and specify
 // which ways the data can be fetched from the GraphQL server.
 const typeDefs = gql`
-enum GameStatus {
-  SETUP
-  REGISTRATION
-  RUNNING
-  SCORING
-  AWARDS
-  COMPLETE
-}
+  enum GameStatus {
+    SETUP
+    REGISTRATION
+    RUNNING
+    SCORING
+    AWARDS
+    COMPLETE
+  }
 
-input GameSettings {
-  countDownSec: Int
-  gameLengthInMin: Int
-  health: Int
-  reloads: Int
-  shields: Int
-  megatags: Int
-  totalTeams: Int
-  options: [String]
-}
+  input GameSettings {
+    countDownSec: Int
+    gameLengthInMin: Int
+    health: Int
+    reloads: Int
+    shields: Int
+    megatags: Int
+    totalTeams: Int
+    options: [String]
+  }
 
-input TeamTagReport {
-  gameId: ID!
+  input TeamTagReport {
+    gameId: ID!
     ltGameId: ID!
     ltTeamId: ID!
     ltPlayerId: ID!
     ltTagTeamId: ID!
     tags: [Int]
-}
+  }
 
-input BasicTagReport {
-  gameId: ID!
+  input BasicTagReport {
+    gameId: ID!
     ltGameId: ID!
     ltTeamId: ID!
     ltPlayerId: ID!
@@ -327,188 +341,190 @@ input BasicTagReport {
     survivedTimeSec: Int!
     tagsReceived: Int!
     followUpReports: [ID]
-}
+  }
 
-enum ReportType {
-  TEAM
-  BASIC
-}
+  enum ReportType {
+    TEAM
+    BASIC
+  }
 
-enum ReportStatusType {
-  PENDING
-  COMPLETE
-}
+  enum ReportStatusType {
+    PENDING
+    COMPLETE
+  }
 
-type ReportCheckListItem {
-  gameId: ID!
+  type ReportCheckListItem {
+    gameId: ID!
     ltGameId: ID!
     ltTeamId: ID!
     ltPlayerId: ID!
     ltTagTeamId: ID
-  type: ReportType!
+    type: ReportType!
     status: ReportStatusType!
-}
+  }
 
-type GameType {
-  name: String!
-  type: String!
-  description: String!
-  iconUrl: String!
-}
+  type GameType {
+    name: String!
+    type: String!
+    description: String!
+    iconUrl: String!
+  }
 
-type Game {
-  id: ID!
+  type Game {
+    id: ID!
     ltId: ID!
     name: String
-  status: GameStatus!
-  completedAt: String
-  startedAt: String
-}
+    status: GameStatus!
+    completedAt: String
+    startedAt: String
+  }
 
-type CurrentGameSettings {
-  countDownSec: Int
-  gameLengthInMin: Int
-  health: Int
-  reloads: Int
-  shields: Int
-  megatags: Int
-  totalTeams: Int
-  options: [String]
-}
+  type CurrentGameSettings {
+    countDownSec: Int
+    gameLengthInMin: Int
+    health: Int
+    reloads: Int
+    shields: Int
+    megatags: Int
+    totalTeams: Int
+    options: [String]
+  }
 
-enum PlayerStatus {
-  IDLE 
-  JOINING 
-  ACTIVE 
-}
+  enum PlayerStatus {
+    IDLE
+    JOINING
+    ACTIVE
+  }
 
-type Player {
-  id: ID!
-  status: PlayerStatus!
-  ltTeamId: ID
-  ltPlayerId: ID
-  name: String
-  totemId: ID!
-  avatarUrl: String!
-  iconUrl: String!
-}
+  type Player {
+    id: ID!
+    status: PlayerStatus!
+    ltTeamId: ID
+    ltPlayerId: ID
+    name: String
+    totemId: ID!
+    avatarUrl: String!
+    iconUrl: String!
+  }
 
-type GamePlayerScore {
-  id: ID!
+  type GamePlayerScore {
+    id: ID!
     gameId: ID!
     teamId: ID
-  playerId: ID
-  totalTagsReceived: Int!
+    playerId: ID
+    totalTagsReceived: Int!
     totalTagsGiven: Int!
     survivedTimeSec: Int!
     zoneTimeSec: Int!
     ltGameId: ID!
     ltTeamId: ID!
     ltPlayerId: ID!
-}
+  }
 
-type Query {
-  game_types_list: [GameType]
-  game_score(id: ID!): [GamePlayerScore]
-  games_list: [Game]
-  game(id: ID!): Game
-  active_games_list: [Game]
-  game_settings(id: ID!): CurrentGameSettings
-  game_players_list(id: ID!): [Player]
-}
+  type Query {
+    game_types_list: [GameType]
+    game_score(id: ID!): [GamePlayerScore]
+    games_list: [Game]
+    game(id: ID!): Game
+    active_games_list: [Game]
+    game_settings(id: ID!): CurrentGameSettings
+    game_players_list(id: ID!): [Player]
+  }
 
-type Subscription {
-  game_settings: CurrentGameSettings
-  game_score(id: ID!): [GamePlayerScore]
-  report_check_list: [ReportCheckListItem]
-  games_list: [Game]
-  active_games_list: [Game]
-  active_players_list: [Player]
-}
+  type Subscription {
+    game_settings: CurrentGameSettings
+    game_score(id: ID!): [GamePlayerScore]
+    report_check_list: [ReportCheckListItem]
+    games_list: [Game]
+    active_games_list: [Game]
+    active_players_list: [Player]
+  }
 
-type Mutation {
-  file_basic_tag_report(report: BasicTagReport!): Game
-  file_team_tag_report(report: TeamTagReport!): Game
-  joined_player(id: ID!, totemId: ID): Player!
+  type Mutation {
+    file_basic_tag_report(report: BasicTagReport!): Game
+    file_team_tag_report(report: TeamTagReport!): Game
+    joined_player(id: ID!, totemId: ID): Player!
 
-  create_game(type: String!, name: String): Game
-  end_game(id: ID!): Game
+    create_game(type: String!, name: String): Game
+    end_game(id: ID!): Game
 
-  update_game_settings(id: ID!, settings: GameSettings!): Game
-  start_game(id: ID!): Game
-  start_registration(id: ID!): Game
-}
+    update_game_settings(id: ID!, settings: GameSettings!): Game
+    start_game(id: ID!): Game
+    start_registration(id: ID!): Game
+  }
 `;
 
 const resolvers = {
   Query: {
-    game_types_list: async (root, args, context) => {
-      return Object.keys(gameMachineBuilderCache).map((key) => {
+    game_types_list: async () => {
+      return Object.keys(gameMachineBuilderCache).map(key => {
         const value = gameMachineBuilderCache[key];
         return {
           type: key,
-          description: value.description, 
+          description: value.description,
           name: value.name,
-          iconUrl: value.iconUrl,
+          iconUrl: value.iconUrl
         };
       });
     },
-    game_settings: async (root, args, context) => {
+    game_settings: async () => {
       return gameSettings;
     },
-    game_score: async (root, args, context) => {
+    game_score: async (root, args) => {
       return await GamePlayerScore.findAll({
-        where: {gameId: args.id}
+        where: { gameId: args.id }
       });
     },
-    games_list: async (root, args, context) => {
+    games_list: async () => {
       return await Game.findAll();
     },
-    game_players_list: async (root, args, context) => {
+    game_players_list: async () => {
       // For now we'll return the active cache
       return playersCache;
     },
-    active_games_list: async (root, args, context) => {
-      return await Game.findAll({where: {
-        status: {
-          [Op.ne]: 'COMPLETE'
+    active_games_list: async () => {
+      return await Game.findAll({
+        where: {
+          status: {
+            [Op.ne]: "COMPLETE"
+          }
         }
-      }});
+      });
     },
-    game: async (root, args, context) => {
+    game: async (root, args) => {
       return await Game.findByPk(args.id);
-    },
+    }
   },
 
   Mutation: {
-    file_basic_tag_report: async (root, args, context) => {
-      // This is coming from the arbiter 
+    file_basic_tag_report: async (root, args) => {
+      // This is coming from the arbiter
       //console.warn(args.report)
 
       const key = reportItemKey(args.report);
-      console.warn('GOT BASIC REPORT: ' + key); 
+      console.warn("GOT BASIC REPORT: " + key);
       const followUpReports = args.report.followUpReports || [];
       reportBasicScoreCache[key] = args.report;
 
-      item = reportCheckListCache[key];
+      const item = reportCheckListCache[key];
       if (reportCheckListCache[key]) {
-        item.status = 'COMPLETE';
+        item.status = "COMPLETE";
 
-        followUpReports.forEach((followUp) => {
+        followUpReports.forEach(followUp => {
           const followUpKey = reportItemKey({
             ...args.report,
             ltTagTeamId: followUp
           });
           if (reportCheckListCache[followUpKey] == null) {
-            console.warn('ADDING FOLLOW UP: ' + followUpKey);
+            console.warn("ADDING FOLLOW UP: " + followUpKey);
             reportCheckListCache[followUpKey] = {
               gameId: args.report.gameId,
               ltGameId: args.report.ltGameId,
               ltTeamId: args.report.ltTeamId,
               ltPlayerId: args.report.ltPlayerId,
               ltTagTeamId: followUp,
-              type: 'TEAM',
-              status: 'PENDING'
+              type: "TEAM",
+              status: "PENDING"
             };
           }
         });
@@ -517,35 +533,35 @@ const resolvers = {
           report_check_list: getReportItemList()
         });
       } else {
-        console.warn('RECEIVED UNSOLICITED REPORT: ' + key);
+        console.warn("RECEIVED UNSOLICITED REPORT: " + key);
       }
 
       checkAndFinalizeScore();
       return null;
     },
-    file_team_tag_report: async (root, args, context) => {
-      // This is coming from the arbiter 
-      
+    file_team_tag_report: async (root, args) => {
+      // This is coming from the arbiter
+
       //console.warn(args.report)
       const report = args.report;
 
       const key = reportItemKey(report);
-      console.warn('GOT TAG REPORT: ' + key); 
+      console.warn("GOT TAG REPORT: " + key);
       reportTeamScoreCache[key] = args.report;
 
-      item = reportCheckListCache[key];
+      const item = reportCheckListCache[key];
       if (item) {
-        item.status = 'COMPLETE'
+        item.status = "COMPLETE";
       } else {
-        console.warn('RECEIVED EARLY REPORT: ' + key);
+        console.warn("RECEIVED EARLY REPORT: " + key);
         reportCheckListCache[key] = {
           gameId: args.report.gameId,
           ltGameId: args.report.ltGameId,
           ltTeamId: args.report.ltTeamId,
           ltPlayerId: args.report.ltPlayerId,
           ltTagTeamId: args.report.ltTagTeamId,
-          type: 'TEAM',
-          status: 'COMPLETE'
+          type: "TEAM",
+          status: "COMPLETE"
         };
       }
 
@@ -556,7 +572,7 @@ const resolvers = {
       checkAndFinalizeScore();
       return null;
     },
-    create_game: async (root, args, context) => {
+    create_game: async (root, args) => {
       // This is coming from a client
       if (gameMachineBuilderCache[args.type] == null) {
         console.warn("NO MACHINE REGISTERED FOR TYPE: " + args.type);
@@ -564,9 +580,9 @@ const resolvers = {
       }
 
       const game = await Game.create({
-        'status': 'SETUP',
-        'ltId': genId(),
-        'name': args.name || 'Game On!',
+        status: "SETUP",
+        ltId: genId(),
+        name: args.name || "Game On!"
       });
 
       const machine = gameMachineBuilderCache[args.type].build(game);
@@ -576,21 +592,23 @@ const resolvers = {
 
       Promise.all([
         Game.findAll(),
-        Game.findAll({where: {
-          status: {
-            [Op.ne]: 'COMPLETE'
+        Game.findAll({
+          where: {
+            status: {
+              [Op.ne]: "COMPLETE"
+            }
           }
-        }})
-      ]).then((results) => {
+        })
+      ]).then(results => {
         pubsub.publish(GAMES_UPDATED, {
           games_list: results[0],
-          active_games_list: results[1], 
+          active_games_list: results[1]
         });
       });
 
       return game;
     },
-    update_game_settings: async (root, args, context) => {
+    update_game_settings: async (root, args) => {
       // This is coming from a client
       if (gameMachineCache[args.id]) {
         gameMachineCache[args.id].updateSettings(args.settings);
@@ -598,11 +616,11 @@ const resolvers = {
         console.warn("CANNOT UPDATE GAME SETTINGS: " + args.id);
       }
       pubsub.publish(SETTINGS_UPDATED, {
-        game_settings: gameSettings,
+        game_settings: gameSettings
       });
       return await Game.findByPk(args.id);
     },
-    start_game: async (root, args, context) => {
+    start_game: async (root, args) => {
       // This is coming from a client
       if (gameMachineCache[args.id]) {
         gameMachineCache[args.id].startGame();
@@ -611,18 +629,18 @@ const resolvers = {
       }
       return await Game.findByPk(args.id);
     },
-    end_game: async (root, args, context) => {
+    end_game: async (root, args) => {
       // This is coming from a client
       if (gameMachineCache[args.id]) {
         gameMachineCache[args.id].endGame();
-        delete gameMachineCache[gameId];
+        delete gameMachineCache[args.id];
         console.log("CLEARING GAME MACHINE");
       } else {
         console.warn("CANNOT END GAME: " + args.id);
       }
       return await Game.findByPk(args.id);
     },
-    start_registration: async (root, args, context) => {
+    start_registration: async (root, args) => {
       // This is coming from a client
       if (gameMachineCache[args.id]) {
         gameMachineCache[args.id].startRegistration();
@@ -631,13 +649,13 @@ const resolvers = {
       }
       return await Game.findByPk(args.id);
     },
-    joined_player: async (root, args, context) => {
+    joined_player: async (root, args) => {
       // This is coming from the arbiter
       if (handlers.onPlayerJoined) {
         handlers.onPlayerJoined(args.id, args.totemId);
       }
       return { id: args.id };
-    },
+    }
   },
 
   Subscription: {
@@ -663,13 +681,13 @@ const resolvers = {
     },
     active_players_list: {
       subscribe: () => pubsub.asyncIterator([PLAYERS_UPDATED])
-    },
-  },
+    }
+  }
 };
 
 const schema = makeExecutableSchema({
   typeDefs: typeDefs,
-  resolvers: resolvers,
+  resolvers: resolvers
 });
 
 module.exports = {
@@ -682,8 +700,7 @@ module.exports = {
   scoreGame,
   addHandler,
   removeHandlers,
-  initialize,
   typeDefs,
   resolvers,
-  schema,
+  schema
 };

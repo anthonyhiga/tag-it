@@ -1,45 +1,58 @@
-const { gql, PubSub, withFilter} = require('apollo-server');
-const { makeExecutableSchema } = require('graphql-tools');
-const {ArbiterSettings, ArbiterChannel} = require("./models");
+/**
+ *
+ *
+ *
+ */
 
-const ARBITER_SETTINGS_UPDATED = 'ARBITER_SETTINGS_UPDATED';
-const ARBITER_ACTIVE_COMMANDS_UPDATED = 'ARBITER_ACTIVE_COMMANDS_UPDATED';
-const ARBITER_CHANNEL_UPDATED = 'ARBITER_CHANNEL_UPDATED';
+const { gql, PubSub, withFilter } = require("apollo-server");
+const { makeExecutableSchema } = require("graphql-tools");
+const { ArbiterSettings } = require("./models");
+
+const ARBITER_SETTINGS_UPDATED = "ARBITER_SETTINGS_UPDATED";
+const ARBITER_ACTIVE_COMMANDS_UPDATED = "ARBITER_ACTIVE_COMMANDS_UPDATED";
+const ARBITER_CHANNEL_UPDATED = "ARBITER_CHANNEL_UPDATED";
+
+interface Command {
+  id: number;
+  arbiterId: string;
+  status: string;
+  message: string;
+}
+
+interface Channel {
+  id: string;
+  arbiterId: string;
+  name: string;
+}
 
 // We build a command cache, because we don't want these to be persistent
-const channelCache = [];
-const commandCache = [];
+const channelCache: Channel[] = [];
+const commandCache: Command[] = [];
 
 function genId() {
-    min = Math.ceil(0);
-    max = Math.floor(2147483646);
-    return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
+  const min = Math.ceil(0);
+  const max = Math.floor(2147483646);
+  return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
 }
 
-function findActiveCommands(id) {
+function findActiveCommands(id: string) {
   return commandCache.filter(
-    (command) => (command.status === "START" ||  command.status === "RUNNING")
-      && command.arbiterId === id);
+    command =>
+      (command.status === "START" || command.status === "RUNNING") &&
+      command.arbiterId === id
+  );
 }
 
-function findChannel(id) {
-  return channelCache.find((channel) => (channel.id === id));
-}
-
-/*
- * Boot up persistence layer
- */
-let sequelize = null;
-const initialize = (db) => {
-  sequelize = db;
+function findChannel(id: string) {
+  return channelCache.find(channel => channel.id === id);
 }
 
 let handlers = {};
-const addHandler = (id, name, method) => {
+const addHandler = (id: string, name: string, method: string) => {
   handlers[name] = method;
-}
+};
 
-const removeHandlers = (id) => {
+const removeHandlers = (id: string) => {
   handlers = {};
 };
 
@@ -50,22 +63,22 @@ const pubsub = new PubSub();
 // which ways the data can be fetched from the GraphQL server.
 const typeDefs = gql`
   enum ArbiterChannelType {
-    AREA 
-    HOLSTER 
-    TARGET 
+    AREA
+    HOLSTER
+    TARGET
   }
 
   enum ArbiterChannelStatus {
-    REQUESTING 
-    ASSIGNING    
+    REQUESTING
+    ASSIGNING
     AVAILABLE
   }
 
   enum ArbiterCommandStatus {
-    START 
-    RUNNING 
-    COMPLETE 
-    FAILED 
+    START
+    RUNNING
+    COMPLETE
+    FAILED
   }
 
   type ArbiterChannel {
@@ -93,7 +106,7 @@ const typeDefs = gql`
   }
 
   type ArbiterSettings {
-    id: ID! 
+    id: ID!
     zoneType: ArbiterZoneMode!
   }
 
@@ -104,7 +117,7 @@ const typeDefs = gql`
   }
 
   type Subscription {
-    arbiter_settings_updated(id: ID!): ArbiterSettings 
+    arbiter_settings_updated(id: ID!): ArbiterSettings
     arbiter_active_commands(id: ID!): [ArbiterCommand]
   }
 
@@ -114,52 +127,68 @@ const typeDefs = gql`
   }
 
   type Mutation {
-    update_arbiter_channel(arbiterId: ID!, name: String!, type: ArbiterChannelType,
-      status: ArbiterChannelStatus, totemId: ID): ArbiterChannel
+    update_arbiter_channel(
+      arbiterId: ID!
+      name: String!
+      type: ArbiterChannelType
+      status: ArbiterChannelStatus
+      totemId: ID
+    ): ArbiterChannel
 
     register_arbiter_settings(id: ID!): ArbiterSettings
-    update_arbiter_settings(settings: UpdateArbiterSettings): ArbiterSettings 
+    update_arbiter_settings(settings: UpdateArbiterSettings): ArbiterSettings
 
     send_arbiter_command(arbiterId: ID!, message: String!): ArbiterCommand
-    respond_arbiter_command(id: ID!, response: String, status: ArbiterCommandStatus!): ArbiterCommand
+    respond_arbiter_command(
+      id: ID!
+      response: String
+      status: ArbiterCommandStatus!
+    ): ArbiterCommand
   }
 `;
 
 const resolvers = {
   Query: {
-    arbiter_settings_list: async (root, args, context) => {
+    arbiter_settings_list: async () => {
       return await ArbiterSettings.findAll();
     },
-    arbiter_settings: async (root, args, context) => {
+    arbiter_settings: async (root: Object, args: { id: string }) => {
       return await ArbiterSettings.findByPk(args.id);
     },
-    arbiter_active_commands: (root, args, context) => {
+    arbiter_active_commands: (root: Object, args: { id: string }) => {
       return findActiveCommands(args.id);
     }
   },
 
   Mutation: {
-    update_arbiter_channel: async (root, args, context) => {
+    update_arbiter_channel: async (root, args) => {
       const id = args.arbiterId + ":" + args.name;
       let currentChannel = findChannel(id);
       if (currentChannel == null) {
-      //  console.log("ADDING NEW CHANNEL: " + id);
+        //  console.log("ADDING NEW CHANNEL: " + id);
         currentChannel = {
           id: id,
           arbiterId: args.arbiterId,
-          name: args.name,
+          name: args.name
         };
         channelCache.push(currentChannel);
       }
 
-      console.log("UPDATING CHANNEL: " + id + " TOTEM: " + args.totemId + " STATUS: " + args.status);
+      console.log(
+        "UPDATING CHANNEL: " +
+          id +
+          " TOTEM: " +
+          args.totemId +
+          " STATUS: " +
+          args.status
+      );
 
       currentChannel.type = args.type;
       currentChannel.status = args.status;
       currentChannel.totemId = args.totemId;
 
       pubsub.publish(ARBITER_CHANNEL_UPDATED, {
-        arbiter_channel_updated: currentChannel 
+        arbiter_channel_updated: currentChannel
       });
 
       if (handlers.onChannelUpdated) {
@@ -169,15 +198,14 @@ const resolvers = {
       return currentChannel;
     },
     register_arbiter_settings: async (root, args, context) => {
-      const settings = await ArbiterSettings
-        .findOrCreate({
-          where: {
-            id: args.id
-          },
-          defaults: {
-            zoneType: 'DISABLED' 
-          }
-        });
+      const settings = await ArbiterSettings.findOrCreate({
+        where: {
+          id: args.id
+        },
+        defaults: {
+          zoneType: "DISABLED"
+        }
+      });
 
       pubsub.publish(ARBITER_SETTINGS_UPDATED, {
         arbiter_settings_updated: settings[0]
@@ -186,12 +214,12 @@ const resolvers = {
       return settings[0];
     },
 
-    update_arbiter_settings: async (root, args, context) => { 
+    update_arbiter_settings: async (root, args, context) => {
       const updateSettings = args.settings;
       const settings = await ArbiterSettings.findByPk(updateSettings.id);
 
       for (key in updateSettings) {
-        settings[key] = updateSettings[key]
+        settings[key] = updateSettings[key];
       }
 
       const updatedSettings = await settings.save();
@@ -206,14 +234,14 @@ const resolvers = {
       const command = {
         id: genId(),
         arbiterId: args.arbiterId,
-        status: 'START',
-        message: args.message,
-      }
+        status: "START",
+        message: args.message
+      };
       commandCache.push(command);
 
       pubsub.publish(ARBITER_ACTIVE_COMMANDS_UPDATED, {
         arbiterId: command.arbiterId,
-        arbiter_active_commands: findActiveCommands(args.arbiterId) 
+        arbiter_active_commands: findActiveCommands(args.arbiterId)
       });
 
       return command;
@@ -231,7 +259,7 @@ const resolvers = {
 
           pubsub.publish(ARBITER_ACTIVE_COMMANDS_UPDATED, {
             arbiterId: command.arbiterId,
-            arbiter_active_commands: findActiveCommands(command.arbiterId) 
+            arbiter_active_commands: findActiveCommands(command.arbiterId)
           });
 
           return command;
@@ -240,10 +268,11 @@ const resolvers = {
 
       // We clean up the cache
       commandCache = commandCache.filter(
-        command => command.status !== "COMPLETE" && command.status != "FAILED");
+        command => command.status !== "COMPLETE" && command.status != "FAILED"
+      );
 
       return null;
-    },
+    }
   },
 
   Subscription: {
@@ -262,13 +291,13 @@ const resolvers = {
           return payload.arbiterId === variables.id;
         }
       )
-    },
-  },
+    }
+  }
 };
 
-const broadcastArbiterCommand = (message) => {
+const broadcastArbiterCommand = message => {
   ArbiterSettings.findAll().then(arbiters => {
-    arbiters.forEach((arbiter) => {
+    arbiters.forEach(arbiter => {
       console.log("BROADCAST TO: " + arbiter.id);
       console.log(message);
       sendArbiterCommand(arbiter.id, message);
@@ -280,18 +309,18 @@ const sendArbiterCommand = (arbiterId, message) => {
   const command = {
     id: genId(),
     arbiterId: arbiterId,
-    status: 'START',
-    message: JSON.stringify(message),
-  }
+    status: "START",
+    message: JSON.stringify(message)
+  };
   commandCache.push(command);
 
   pubsub.publish(ARBITER_ACTIVE_COMMANDS_UPDATED, {
     arbiterId: command.arbiterId,
-    arbiter_active_commands: findActiveCommands(arbiterId) 
+    arbiter_active_commands: findActiveCommands(arbiterId)
   });
 
   return command;
-}
+};
 
 const getChannelList = () => {
   return channelCache;
@@ -302,22 +331,21 @@ const updateChannelState = (id, state) => {
   if (channel != null) {
     channel.state = state;
   }
-}; 
+};
 
 const schema = makeExecutableSchema({
   typeDefs: typeDefs,
-  resolvers: resolvers,
+  resolvers: resolvers
 });
 
-module.exports = {
+export default {
   addHandler,
   removeHandlers,
   sendArbiterCommand,
   broadcastArbiterCommand,
   getChannelList,
   updateChannelState,
-  initialize,
   typeDefs,
   resolvers,
-  schema,
+  schema
 };

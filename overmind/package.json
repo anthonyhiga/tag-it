@@ -4,20 +4,32 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1" ,
+    "db": "sh db.sh"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/bluebird": "^3.5.27",
+    "@types/graphql": "^14.2.2",
+    "@types/node": "^12.6.2",
+    "@types/validator": "^10.11.1",
     "apollo-server": "^2.6.3",
     "apollo-server-express": "^2.6.3",
+    "eslint": "^6.0.1",
     "faker": "^4.1.0",
     "graphql": "^14.3.1",
     "javascript-state-machine": "^3.1.0",
     "morgan": "^1.9.1",
     "sequelize": "^5.8.9",
     "sequelize-cli": "^5.5.0",
+    "sequelize-typescript": "^0.6.11",
     "sqlite3": "^4.0.9"
+  },
+  "devDependencies": {
+    "awesome-typescript-loader": "^5.2.1",
+    "source-map-loader": "^0.2.4",
+    "typescript": "^3.5.3"
   }
 }
