@@ -3,12 +3,18 @@
  * Game Infrastructure
  *
  */
-const { gql, PubSub, withFilter } = require("apollo-server");
-const { makeExecutableSchema } = require("graphql-tools");
-const { Game, GamePlayerScore } = require("./models");
-const Sequelize = require("sequelize");
+import "graphql-import-node";
 
-const Op = Sequelize.Op;
+import * as typeDefs from "./schema/games.graphql";
+
+import { Op } from "sequelize";
+import { PubSub, withFilter } from "apollo-server";
+
+import { makeExecutableSchema } from "graphql-tools";
+import { GamePlayer } from './base-types';
+
+const { Game, GamePlayerScore } = require("./models");
+
 const PLAYERS_UPDATED = "PLAYERS_UPDATED";
 const GAMES_UPDATED = "GAMES_UPDATED";
 const SETTINGS_UPDATED = "SETTINGS_UPDATED";
@@ -92,8 +98,8 @@ const updateGameSettings = settings => {
   gameSettings = settings;
 };
 
-let playersCache = [];
-const updatePlayers = players => {
+let playersCache: GamePlayer[] = [];
+const updatePlayers = (players: GamePlayer[]) => {
   playersCache = players;
 
   pubsub.publish(PLAYERS_UPDATED, {
@@ -101,7 +107,7 @@ const updatePlayers = players => {
   });
 };
 
-const updateGameState = (id, status) => {
+const updateGameState = (id: number, status: string) => {
   return Game.findByPk(id)
     .then(game => {
       if (game != null) {
@@ -164,7 +170,7 @@ const finalizeScore = () => {
     });
   }
 
-  let gameId = null;
+  let gameId: number | null = null;
   const finalScore = [];
   const created = [];
   for (const key in reportBasicScoreCache) {
@@ -241,7 +247,7 @@ const checkAndFinalizeScore = () => {
  * We will need to refactor this later to support
  * multiple games simultaneously later.
  */
-const scoreGame = (reportItems, timeLimitMs) => {
+const scoreGame = (reportItems, timeLimitMs: number) => {
   scoringTimer = setTimeout(() => {
     console.warn("REACHED TIMEOUT, TALLYING SCORE ANYWAY");
     finalizeScore();
@@ -299,160 +305,6 @@ const forceSubscriptionUpdate = () => {
     });
   });
 };
-
-// Type definitions define the "shape" of your data and specify
-// which ways the data can be fetched from the GraphQL server.
-const typeDefs = gql`
-  enum GameStatus {
-    SETUP
-    REGISTRATION
-    RUNNING
-    SCORING
-    AWARDS
-    COMPLETE
-  }
-
-  input GameSettings {
-    countDownSec: Int
-    gameLengthInMin: Int
-    health: Int
-    reloads: Int
-    shields: Int
-    megatags: Int
-    totalTeams: Int
-    options: [String]
-  }
-
-  input TeamTagReport {
-    gameId: ID!
-    ltGameId: ID!
-    ltTeamId: ID!
-    ltPlayerId: ID!
-    ltTagTeamId: ID!
-    tags: [Int]
-  }
-
-  input BasicTagReport {
-    gameId: ID!
-    ltGameId: ID!
-    ltTeamId: ID!
-    ltPlayerId: ID!
-    zoneTimeSec: Int!
-    survivedTimeSec: Int!
-    tagsReceived: Int!
-    followUpReports: [ID]
-  }
-
-  enum ReportType {
-    TEAM
-    BASIC
-  }
-
-  enum ReportStatusType {
-    PENDING
-    COMPLETE
-  }
-
-  type ReportCheckListItem {
-    gameId: ID!
-    ltGameId: ID!
-    ltTeamId: ID!
-    ltPlayerId: ID!
-    ltTagTeamId: ID
-    type: ReportType!
-    status: ReportStatusType!
-  }
-
-  type GameType {
-    name: String!
-    type: String!
-    description: String!
-    iconUrl: String!
-  }
-
-  type Game {
-    id: ID!
-    ltId: ID!
-    name: String
-    status: GameStatus!
-    completedAt: String
-    startedAt: String
-  }
-
-  type CurrentGameSettings {
-    countDownSec: Int
-    gameLengthInMin: Int
-    health: Int
-    reloads: Int
-    shields: Int
-    megatags: Int
-    totalTeams: Int
-    options: [String]
-  }
-
-  enum PlayerStatus {
-    IDLE
-    JOINING
-    ACTIVE
-  }
-
-  type Player {
-    id: ID!
-    status: PlayerStatus!
-    ltTeamId: ID
-    ltPlayerId: ID
-    name: String
-    totemId: ID!
-    avatarUrl: String!
-    iconUrl: String!
-  }
-
-  type GamePlayerScore {
-    id: ID!
-    gameId: ID!
-    teamId: ID
-    playerId: ID
-    totalTagsReceived: Int!
-    totalTagsGiven: Int!
-    survivedTimeSec: Int!
-    zoneTimeSec: Int!
-    ltGameId: ID!
-    ltTeamId: ID!
-    ltPlayerId: ID!
-  }
-
-  type Query {
-    game_types_list: [GameType]
-    game_score(id: ID!): [GamePlayerScore]
-    games_list: [Game]
-    game(id: ID!): Game
-    active_games_list: [Game]
-    game_settings(id: ID!): CurrentGameSettings
-    game_players_list(id: ID!): [Player]
-  }
-
-  type Subscription {
-    game_settings: CurrentGameSettings
-    game_score(id: ID!): [GamePlayerScore]
-    report_check_list: [ReportCheckListItem]
-    games_list: [Game]
-    active_games_list: [Game]
-    active_players_list: [Player]
-  }
-
-  type Mutation {
-    file_basic_tag_report(report: BasicTagReport!): Game
-    file_team_tag_report(report: TeamTagReport!): Game
-    joined_player(id: ID!, totemId: ID): Player!
-
-    create_game(type: String!, name: String): Game
-    end_game(id: ID!): Game
-
-    update_game_settings(id: ID!, settings: GameSettings!): Game
-    start_game(id: ID!): Game
-    start_registration(id: ID!): Game
-  }
-`;
 
 const resolvers = {
   Query: {
@@ -690,7 +542,7 @@ const schema = makeExecutableSchema({
   resolvers: resolvers
 });
 
-module.exports = {
+export default {
   updateGameSettings,
   updatePlayers,
   forceSubscriptionUpdate,

@@ -1,0 +1,83 @@
+  enum ArbiterChannelType {
+    AREA
+    HOLSTER
+    TARGET
+  }
+
+  enum ArbiterChannelStatus {
+    REQUESTING
+    ASSIGNING
+    AVAILABLE
+  }
+
+  enum ArbiterCommandStatus {
+    START
+    RUNNING
+    COMPLETE
+    FAILED
+  }
+
+  type ArbiterChannel {
+    id: ID!
+    name: ID!
+    arbiterId: ID!
+    type: ArbiterChannelType!
+    status: ArbiterChannelStatus!
+    totemId: ID
+  }
+
+  type ArbiterCommand {
+    id: ID!
+    arbiterId: ID!
+    status: ArbiterCommandStatus!
+    message: String!
+    response: String
+  }
+
+  enum ArbiterZoneMode {
+    DISABLED
+    SUPPLY_ZONE
+    HOSTILE_ZONE
+    CONTESTED_ZONE
+  }
+
+  type ArbiterSettings {
+    id: ID!
+    zoneType: ArbiterZoneMode!
+  }
+
+  type Query {
+    arbiter_settings_list: [ArbiterSettings]
+    arbiter_settings(id: ID!): ArbiterSettings
+    arbiter_active_commands(id: ID!): [ArbiterCommand]
+  }
+
+  type Subscription {
+    arbiter_settings_updated(id: ID!): ArbiterSettings
+    arbiter_active_commands(id: ID!): [ArbiterCommand]
+  }
+
+  input UpdateArbiterSettings {
+    id: ID!
+    zoneType: ArbiterZoneMode!
+  }
+
+  type Mutation {
+    update_arbiter_channel(
+      arbiterId: ID!
+      name: String!
+      type: ArbiterChannelType
+      status: ArbiterChannelStatus
+      totemId: ID
+    ): ArbiterChannel
+
+    register_arbiter_settings(id: ID!): ArbiterSettings
+    update_arbiter_settings(settings: UpdateArbiterSettings): ArbiterSettings
+
+    send_arbiter_command(arbiterId: ID!, message: String!): ArbiterCommand
+    respond_arbiter_command(
+      id: ID!
+      response: String
+      status: ArbiterCommandStatus!
+    ): ArbiterCommand
+  }

@@ -3,349 +3,239 @@
  *
  *
  */
+import "graphql-import-node";
 
-const { gql, PubSub, withFilter } = require("apollo-server");
-const { makeExecutableSchema } = require("graphql-tools");
+import * as typeDefs from "./schema/arbiters.graphql";
+import Channels, { Channel } from "./channels";
+import Commands from "./commands";
+
+import { PubSub, withFilter } from "apollo-server";
+import { makeExecutableSchema } from "graphql-tools";
 const { ArbiterSettings } = require("./models");
 
 const ARBITER_SETTINGS_UPDATED = "ARBITER_SETTINGS_UPDATED";
 const ARBITER_ACTIVE_COMMANDS_UPDATED = "ARBITER_ACTIVE_COMMANDS_UPDATED";
 const ARBITER_CHANNEL_UPDATED = "ARBITER_CHANNEL_UPDATED";
 
-interface Command {
-  id: number;
-  arbiterId: string;
-  status: string;
-  message: string;
-}
+type HandlerType = "onChannelUpdated";
 
-interface Channel {
-  id: string;
-  arbiterId: string;
-  name: string;
-}
+export class Arbiters {
+  // Private PUBSUB for Arbiters
+  pubsub = new PubSub();
 
-// We build a command cache, because we don't want these to be persistent
-const channelCache: Channel[] = [];
-const commandCache: Command[] = [];
+  handlers: {
+    onChannelUpdated?: (channel: Channel) => void;
+  } = {};
 
-function genId() {
-  const min = Math.ceil(0);
-  const max = Math.floor(2147483646);
-  return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
-}
-
-function findActiveCommands(id: string) {
-  return commandCache.filter(
-    command =>
-      (command.status === "START" || command.status === "RUNNING") &&
-      command.arbiterId === id
-  );
-}
-
-function findChannel(id: string) {
-  return channelCache.find(channel => channel.id === id);
-}
-
-let handlers = {};
-const addHandler = (id: string, name: string, method: string) => {
-  handlers[name] = method;
-};
-
-const removeHandlers = (id: string) => {
-  handlers = {};
-};
-
-// Private PUBSUB for Arbiters
-const pubsub = new PubSub();
-
-// Type definitions define the "shape" of your data and specify
-// which ways the data can be fetched from the GraphQL server.
-const typeDefs = gql`
-  enum ArbiterChannelType {
-    AREA
-    HOLSTER
-    TARGET
-  }
-
-  enum ArbiterChannelStatus {
-    REQUESTING
-    ASSIGNING
-    AVAILABLE
-  }
-
-  enum ArbiterCommandStatus {
-    START
-    RUNNING
-    COMPLETE
-    FAILED
-  }
-
-  type ArbiterChannel {
-    id: ID!
-    name: ID!
-    arbiterId: ID!
-    type: ArbiterChannelType!
-    status: ArbiterChannelStatus!
-    totemId: ID
-  }
-
-  type ArbiterCommand {
-    id: ID!
-    arbiterId: ID!
-    status: ArbiterCommandStatus!
-    message: String!
-    response: String
-  }
-
-  enum ArbiterZoneMode {
-    DISABLED
-    SUPPLY_ZONE
-    HOSTILE_ZONE
-    CONTESTED_ZONE
-  }
-
-  type ArbiterSettings {
-    id: ID!
-    zoneType: ArbiterZoneMode!
-  }
-
-  type Query {
-    arbiter_settings_list: [ArbiterSettings]
-    arbiter_settings(id: ID!): ArbiterSettings
-    arbiter_active_commands(id: ID!): [ArbiterCommand]
-  }
-
-  type Subscription {
-    arbiter_settings_updated(id: ID!): ArbiterSettings
-    arbiter_active_commands(id: ID!): [ArbiterCommand]
-  }
-
-  input UpdateArbiterSettings {
-    id: ID!
-    zoneType: ArbiterZoneMode!
-  }
-
-  type Mutation {
-    update_arbiter_channel(
-      arbiterId: ID!
-      name: String!
-      type: ArbiterChannelType
-      status: ArbiterChannelStatus
-      totemId: ID
-    ): ArbiterChannel
-
-    register_arbiter_settings(id: ID!): ArbiterSettings
-    update_arbiter_settings(settings: UpdateArbiterSettings): ArbiterSettings
-
-    send_arbiter_command(arbiterId: ID!, message: String!): ArbiterCommand
-    respond_arbiter_command(
-      id: ID!
-      response: String
-      status: ArbiterCommandStatus!
-    ): ArbiterCommand
-  }
-`;
-
-const resolvers = {
-  Query: {
-    arbiter_settings_list: async () => {
-      return await ArbiterSettings.findAll();
-    },
-    arbiter_settings: async (root: Object, args: { id: string }) => {
-      return await ArbiterSettings.findByPk(args.id);
-    },
-    arbiter_active_commands: (root: Object, args: { id: string }) => {
-      return findActiveCommands(args.id);
-    }
-  },
-
-  Mutation: {
-    update_arbiter_channel: async (root, args) => {
-      const id = args.arbiterId + ":" + args.name;
-      let currentChannel = findChannel(id);
-      if (currentChannel == null) {
-        //  console.log("ADDING NEW CHANNEL: " + id);
-        currentChannel = {
-          id: id,
-          arbiterId: args.arbiterId,
-          name: args.name
-        };
-        channelCache.push(currentChannel);
-      }
-
-      console.log(
-        "UPDATING CHANNEL: " +
-          id +
-          " TOTEM: " +
-          args.totemId +
-          " STATUS: " +
-          args.status
-      );
-
-      currentChannel.type = args.type;
-      currentChannel.status = args.status;
-      currentChannel.totemId = args.totemId;
-
-      pubsub.publish(ARBITER_CHANNEL_UPDATED, {
-        arbiter_channel_updated: currentChannel
-      });
-
-      if (handlers.onChannelUpdated) {
-        handlers.onChannelUpdated(currentChannel);
-      }
-
-      return currentChannel;
-    },
-    register_arbiter_settings: async (root, args, context) => {
-      const settings = await ArbiterSettings.findOrCreate({
-        where: {
-          id: args.id
-        },
-        defaults: {
-          zoneType: "DISABLED"
-        }
-      });
-
-      pubsub.publish(ARBITER_SETTINGS_UPDATED, {
-        arbiter_settings_updated: settings[0]
-      });
-
-      return settings[0];
-    },
-
-    update_arbiter_settings: async (root, args, context) => {
-      const updateSettings = args.settings;
-      const settings = await ArbiterSettings.findByPk(updateSettings.id);
-
-      for (key in updateSettings) {
-        settings[key] = updateSettings[key];
-      }
-
-      const updatedSettings = await settings.save();
-
-      pubsub.publish(ARBITER_SETTINGS_UPDATED, {
-        arbiter_settings_updated: settings
-      });
-      return settings;
-    },
-
-    send_arbiter_command: async (root, args, context) => {
-      const command = {
-        id: genId(),
-        arbiterId: args.arbiterId,
-        status: "START",
-        message: args.message
-      };
-      commandCache.push(command);
-
-      pubsub.publish(ARBITER_ACTIVE_COMMANDS_UPDATED, {
-        arbiterId: command.arbiterId,
-        arbiter_active_commands: findActiveCommands(args.arbiterId)
-      });
-
-      return command;
-    },
-
-    respond_arbiter_command: async (root, args, context) => {
-      for (command of commandCache) {
-        if (command.id == args.id) {
-          command.response = args.response;
-          command.status = args.status;
-
-          if (command.status == "FAILED") {
-            console.warn(command);
-          }
-
-          pubsub.publish(ARBITER_ACTIVE_COMMANDS_UPDATED, {
-            arbiterId: command.arbiterId,
-            arbiter_active_commands: findActiveCommands(command.arbiterId)
-          });
-
-          return command;
-        }
-      }
-
-      // We clean up the cache
-      commandCache = commandCache.filter(
-        command => command.status !== "COMPLETE" && command.status != "FAILED"
-      );
-
-      return null;
-    }
-  },
-
-  Subscription: {
-    arbiter_settings_updated: {
-      subscribe: withFilter(
-        () => pubsub.asyncIterator(ARBITER_SETTINGS_UPDATED),
-        (payload, variables) => {
-          return payload.arbiter_settings_updated.id === variables.id;
-        }
-      )
-    },
-    arbiter_active_commands: {
-      subscribe: withFilter(
-        () => pubsub.asyncIterator(ARBITER_ACTIVE_COMMANDS_UPDATED),
-        (payload, variables) => {
-          return payload.arbiterId === variables.id;
-        }
-      )
-    }
-  }
-};
-
-const broadcastArbiterCommand = message => {
-  ArbiterSettings.findAll().then(arbiters => {
-    arbiters.forEach(arbiter => {
-      console.log("BROADCAST TO: " + arbiter.id);
-      console.log(message);
-      sendArbiterCommand(arbiter.id, message);
-    });
-  });
-};
-
-const sendArbiterCommand = (arbiterId, message) => {
-  const command = {
-    id: genId(),
-    arbiterId: arbiterId,
-    status: "START",
-    message: JSON.stringify(message)
+  addHandler = (id: string, name: HandlerType, method: () => void) => {
+    this.handlers[name] = method;
   };
-  commandCache.push(command);
 
-  pubsub.publish(ARBITER_ACTIVE_COMMANDS_UPDATED, {
-    arbiterId: command.arbiterId,
-    arbiter_active_commands: findActiveCommands(arbiterId)
-  });
+  removeHandlers = (id: string) => {
+    this.handlers = {};
+  };
 
-  return command;
-};
+  broadcastArbiterCommand = (message: Object) => {
+    ArbiterSettings.findAll().then((arbiters: []) => {
+      arbiters.forEach((arbiter: { id: string }) => {
+        console.log("BROADCAST TO: " + arbiter.id);
+        console.log(message);
+        this.sendArbiterCommand(arbiter.id, message);
+      });
+    });
+  };
 
-const getChannelList = () => {
-  return channelCache;
-};
+  sendArbiterCommand = (arbiterId: string, message: Object) => {
+    const command = {
+      arbiterId: arbiterId,
+      status: "START",
+      message: JSON.stringify(message)
+    };
+    Commands.add(command);
 
-const updateChannelState = (id, state) => {
-  const channel = findChannel(id);
-  if (channel != null) {
-    channel.state = state;
-  }
-};
+    this.pubsub.publish(ARBITER_ACTIVE_COMMANDS_UPDATED, {
+      arbiterId: command.arbiterId,
+      arbiter_active_commands: Commands.findActiveCommands(arbiterId)
+    });
 
-const schema = makeExecutableSchema({
-  typeDefs: typeDefs,
-  resolvers: resolvers
-});
+    return command;
+  };
 
-export default {
-  addHandler,
-  removeHandlers,
-  sendArbiterCommand,
-  broadcastArbiterCommand,
-  getChannelList,
-  updateChannelState,
-  typeDefs,
-  resolvers,
-  schema
-};
+  getChannelList = () => {
+    return Channels.all();
+  };
+
+  updateChannelStatus = (arbiterId: string, name: string, status: string) => {
+    const channel = Channels.findChannel(arbiterId, name);
+    if (channel != null) {
+      channel.status = status;
+    }
+  };
+
+  // GraphQL handlers
+  updateArbiterChannel = async (
+    root: Object,
+    args: {
+      arbiterId: string;
+      name: string;
+      type: string;
+      status: string;
+      totemId: string;
+    }
+  ) => {
+    const channel: Channel = {
+      id: "",
+      arbiterId: args.arbiterId,
+      name: args.name,
+      type: args.type,
+      status: args.status,
+      totemId: args.totemId
+    };
+
+    const currentChannel = Channels.addOrUpdateChannel(channel);
+
+    this.pubsub.publish(ARBITER_CHANNEL_UPDATED, {
+      arbiter_channel_updated: currentChannel
+    });
+
+    if (this.handlers.onChannelUpdated) {
+      this.handlers.onChannelUpdated(currentChannel);
+    }
+
+    return currentChannel;
+  };
+
+  registerArbiterSettings = async (
+    root: Object,
+    args: {
+      id: string;
+    }
+  ) => {
+    const settings = await ArbiterSettings.findOrCreate({
+      where: {
+        id: args.id
+      },
+      defaults: {
+        zoneType: "DISABLED"
+      }
+    });
+
+    this.pubsub.publish(ARBITER_SETTINGS_UPDATED, {
+      arbiter_settings_updated: settings[0]
+    });
+
+    return settings[0];
+  };
+
+  updateArbiterSettings = async (
+    root: Object,
+    args: {
+      settings: {
+        id: string;
+      };
+    }
+  ) => {
+    const updateSettings = args.settings;
+    const settings = await ArbiterSettings.findByPk(updateSettings.id);
+
+    for (const key in updateSettings) {
+      settings[key] = updateSettings[key];
+    }
+
+    await settings.save();
+
+    this.pubsub.publish(ARBITER_SETTINGS_UPDATED, {
+      arbiter_settings_updated: settings
+    });
+    return settings;
+  };
+
+  sendArbiterCommandMutation = async (
+    root: Object,
+    args: { arbiterId: string; message: string }
+  ) => {
+    const command = {
+      arbiterId: args.arbiterId,
+      status: "START",
+      message: args.message
+    };
+    Commands.add(command);
+
+    this.pubsub.publish(ARBITER_ACTIVE_COMMANDS_UPDATED, {
+      arbiterId: command.arbiterId,
+      arbiter_active_commands: Commands.findActiveCommands(args.arbiterId)
+    });
+
+    return command;
+  };
+
+  respondArbiterCommand = async (
+    root: Object,
+    args: { id: number; response: string; status: string }
+  ) => {
+    const command = Commands.find(args.id);
+    if (command != null) {
+      command.response = args.response;
+      command.status = args.status;
+
+      if (command.status == "FAILED") {
+        console.warn(command);
+      }
+
+      this.pubsub.publish(ARBITER_ACTIVE_COMMANDS_UPDATED, {
+        arbiterId: command.arbiterId,
+        arbiter_active_commands: Commands.findActiveCommands(command.arbiterId)
+      });
+    }
+
+    // We clean up the cache
+    Commands.clean();
+    return command;
+  };
+
+  buildSchema = () => {
+    const resolvers = {
+      Query: {
+        arbiter_settings_list: async () => await ArbiterSettings.findAll(),
+        arbiter_settings: async (root: Object, args: { id: string }) =>
+          await ArbiterSettings.findByPk(args.id),
+        arbiter_active_commands: (root: Object, args: { id: string }) =>
+          Commands.findActiveCommands(args.id)
+      },
+
+      Mutation: {
+        update_arbiter_channel: this.updateArbiterChannel,
+        register_arbiter_settings: this.registerArbiterSettings,
+        update_arbiter_settings: this.updateArbiterSettings,
+        send_arbiter_command: this.sendArbiterCommandMutation,
+        respond_arbiter_command: this.respondArbiterCommand
+      },
+
+      Subscription: {
+        arbiter_settings_updated: {
+          subscribe: withFilter(
+            () => this.pubsub.asyncIterator(ARBITER_SETTINGS_UPDATED),
+            (payload, variables) =>
+              payload.arbiter_settings_updated.id === variables.id
+          )
+        },
+        arbiter_active_commands: {
+          subscribe: withFilter(
+            () => this.pubsub.asyncIterator(ARBITER_ACTIVE_COMMANDS_UPDATED),
+            (payload, variables) => payload.arbiterId === variables.id
+          )
+        }
+      }
+    };
+
+    const schema = makeExecutableSchema({
+      typeDefs,
+      resolvers
+    });
+
+    return schema;
+  };
+}
+
+const arbiters = new Arbiters();
+export default arbiters;

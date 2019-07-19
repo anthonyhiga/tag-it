@@ -6,14 +6,14 @@
 const { mergeSchemas } = require("graphql-tools");
 const { ApolloServer } = require("apollo-server-express");
 import arbiters from "./arbiters";
-import games from "./games.js";
+import gameManager from "./game-manager";
 import http from "http";
 import express from "express";
 
-import baseGame from "./base-game.js";
+import baseGame from "./base-game";
 
-games.cleanUpOldGames();
-games.registerGameMachine(baseGame);
+gameManager.cleanUpOldGames();
+gameManager.registerGameMachine(baseGame);
 
 /*
  * Setup WebSockets
@@ -25,11 +25,11 @@ const app = express();
 const server = new ApolloServer({
   subscriptions: {
     onConnect: () => {
-      games.forceSubscriptionUpdate();
+      gameManager.forceSubscriptionUpdate();
     }
   },
   schema: mergeSchemas({
-    schemas: [arbiters.schema, games.schema]
+    schemas: [arbiters.buildSchema(), gameManager.schema]
   })
 });
 
