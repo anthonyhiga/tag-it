@@ -94,9 +94,12 @@ export class GameManager {
   };
 
   gameSettings: GameSettings = { ...DEFAULT_GAME_SETTINGS };
-  updateGameSettings = (settings: GameSettings) => {
+  onUpdateGameSettings = (settings: GameSettings) => {
     console.warn("UPDATED SETTINGS");
     this.gameSettings = settings;
+    this.pubsub.publish(SETTINGS_UPDATED, {
+      game_settings: this.gameSettings
+    });
   };
 
   reportCheckListCache = {};
@@ -334,7 +337,10 @@ export class GameManager {
       name: args.name || "Game On!"
     });
 
-    const machine = this.gameMachineBuilderCache[args.type].build(game);
+    const machine = this.gameMachineBuilderCache[args.type].build(
+      game,
+      this.onUpdateGameSettings
+    );
     this.gameMachineCache[game.id] = machine;
 
     // Boot up this game machine

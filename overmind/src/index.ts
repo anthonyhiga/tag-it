@@ -10,10 +10,14 @@ import gameManager from "./game-manager";
 import http from "http";
 import express from "express";
 
-import teamGame from "./games/team-game";
+import gameSolo from "./games/solo-game";
+import game2Team from "./games/2-team-game";
+import game3Team from "./games/3-team-game";
 
 gameManager.cleanUpOldGames();
-gameManager.registerGameMachine(teamGame);
+gameManager.registerGameMachine(gameSolo);
+gameManager.registerGameMachine(game2Team);
+gameManager.registerGameMachine(game3Team);
 
 /*
  * Setup WebSockets

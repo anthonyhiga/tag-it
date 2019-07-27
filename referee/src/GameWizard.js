@@ -338,39 +338,6 @@ const GameSettingsEditor = (props) => {
              }}
              value={settings.megatags} label="Mega-tags" variant="outlined"/>
           </Box>
-          <Box flexGrow={1}/>
-          <Box>
-            <Box border={1} borderColor="grey.400" borderRadius="3%" padding={2} width={200}> 
-        <FormControl component="fieldset">
-        <Box paddingBottom={2} paddingTop={1}>
-        <FormLabel component="legend" paddingBottom={10}>Total Teams</FormLabel>
-        </Box>
-        <RadioGroup
-        aria-label="Total Teams"
-        name="totalTeams"
-        onChange={(event) => {
-          if (event.target.value === "solo") {
-            ns.totalTeams = 0
-            props.setSettings(ns);
-          }
-          if (event.target.value === "2") {
-            ns.totalTeams = 2
-            props.setSettings(ns);
-          }
-          if (event.target.value === "3") {
-            ns.totalTeams = 3
-            props.setSettings(ns);
-          }
-        }}
-        value={team}
-        >
-        <FormControlLabel value="solo" control={<Radio />} label="Solo" />
-        <FormControlLabel value="2" control={<Radio />} label="2 Teams" />
-        <FormControlLabel value="3" control={<Radio />} label="3 Teams" />
-        </RadioGroup>
-        </FormControl>
-            </Box>
-          </Box>
         </Box>
   );
 }

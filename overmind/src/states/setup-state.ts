@@ -1,11 +1,5 @@
 import { BaseState } from "./base-state";
-import {
-  Game,
-  GameSettings,
-  GameTeam,
-  DEFAULT_SM_MODEL,
-  DEFAULT_GAME_SETTINGS
-} from "../base-types";
+import { Game, GameSettings, GameTeam, DEFAULT_SM_MODEL } from "../base-types";
 import manager from "../game-manager";
 
 const DEFAULT_TEAM = { count: 0, players: [] };
@@ -13,13 +7,20 @@ const DEFAULT_TEAM = { count: 0, players: [] };
 export class SetupState extends BaseState<{
   onRegister: () => void;
   game: Game;
+  initialSettings: GameSettings;
   settings: GameSettings;
   setSettings: (settings: GameSettings) => void;
+  onGameSettingsUpdate: (settings: GameSettings) => void;
   teams: GameTeam[];
   setTeams: (teams: GameTeam[]) => void;
 }> {
   buildTeam(id: number) {
     return { id, ...DEFAULT_TEAM };
+  }
+
+  updateSettings(settings: GameSettings) {
+    this.props.setSettings(settings);
+    this.props.onGameSettingsUpdate(settings);
   }
 
   onEnter() {
@@ -29,7 +30,7 @@ export class SetupState extends BaseState<{
       this.buildTeam(2),
       this.buildTeam(3)
     ]);
-    this.props.setSettings({ ...DEFAULT_GAME_SETTINGS });
+    this.updateSettings(this.props.initialSettings);
   }
 
   onGameEnd = () => {
@@ -38,8 +39,9 @@ export class SetupState extends BaseState<{
 
   onGameSettingsUpdate = (settings: GameSettings) => {
     console.warn("UPDATING SETTINGS");
-    this.props.setSettings({
-      ...DEFAULT_GAME_SETTINGS,
+    console.warn(settings);
+    this.updateSettings({
+      ...this.props.initialSettings,
       ...settings
     });
   };

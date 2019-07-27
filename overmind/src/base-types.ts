@@ -102,7 +102,10 @@ export interface GameTeam {
   players: Player[];
 }
 
-export interface SMProps {}
+export interface SMProps {
+  settings: GameSettings;
+  onGameSettingsUpdate: (settings: GameSettings) => void;
+}
 
 export interface SMModel {
   onGameEnd: () => void;
@@ -114,7 +117,7 @@ export interface SMModel {
 }
 
 const DEFAULT_HANDLER = (name: string) => () => {
-  console.warn("NOT IMPLEMENTED HANDLER CALLED: " + name); 
+  console.warn("NOT IMPLEMENTED HANDLER CALLED: " + name);
 };
 
 export const DEFAULT_SM_MODEL: SMModel = {
@@ -123,12 +126,15 @@ export const DEFAULT_SM_MODEL: SMModel = {
   onRegistrationStart: DEFAULT_HANDLER("onRegistrationStart"),
   onChannelUpdated: DEFAULT_HANDLER("onChannelUpdated"),
   onPlayerJoined: DEFAULT_HANDLER("onPlayerJoined"),
-  onGameStart: DEFAULT_HANDLER("onGameStart"),
+  onGameStart: DEFAULT_HANDLER("onGameStart")
 };
 
 export interface GameMachineBuilder<SM> {
   type: string;
-  build: (game: Game) => SM;
+  build: (
+    game: Game,
+    onGameSettingsUpdate: (settings: GameSettings) => void
+  ) => SM;
   iconUrl: string;
   description: string;
   name: string;
