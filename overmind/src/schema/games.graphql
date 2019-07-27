@@ -91,7 +91,7 @@
     ACTIVE
   }
 
-  type Player {
+  type GamePlayer {
     id: ID!
     status: PlayerStatus!
     ltTeamId: ID
@@ -123,7 +123,7 @@
     game(id: ID!): Game
     active_games_list: [Game]
     game_settings(id: ID!): CurrentGameSettings
-    game_players_list(id: ID!): [Player]
+    game_players_list(id: ID!): [GamePlayer]
   }
 
   type Subscription {
@@ -132,13 +132,13 @@
     report_check_list: [ReportCheckListItem]
     games_list: [Game]
     active_games_list: [Game]
-    active_players_list: [Player]
+    active_players_list: [GamePlayer]
   }
 
   type Mutation {
     file_basic_tag_report(report: BasicTagReport!): Game
     file_team_tag_report(report: TeamTagReport!): Game
-    joined_player(id: ID!, totemId: ID): Player!
+    joined_player(id: ID!, totemId: ID): GamePlayer!
 
     create_game(type: String!, name: String): Game
     end_game(id: ID!): Game

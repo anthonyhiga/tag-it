@@ -1,11 +1,4 @@
-export interface Channel {
-  id?: string;
-  arbiterId: string;
-  name: string;
-  type: string;
-  status: string;
-  totemId: string;
-}
+import { Channel } from "./base-types";
 
 class Channels {
   data: Channel[] = [];

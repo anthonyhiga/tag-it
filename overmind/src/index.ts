@@ -10,10 +10,10 @@ import gameManager from "./game-manager";
 import http from "http";
 import express from "express";
 
-import baseGame from "./base-game";
+import teamGame from "./games/team-game";
 
 gameManager.cleanUpOldGames();
-gameManager.registerGameMachine(baseGame);
+gameManager.registerGameMachine(teamGame);
 
 /*
  * Setup WebSockets
@@ -29,7 +29,7 @@ const server = new ApolloServer({
     }
   },
   schema: mergeSchemas({
-    schemas: [arbiters.buildSchema(), gameManager.schema]
+    schemas: [arbiters.buildSchema(), gameManager.buildSchema()]
   })
 });
 

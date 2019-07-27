@@ -1,6 +1,6 @@
 /**
  * @flow
- * @relayHash 6b22574d14de67e93a14567c0317894b
+ * @relayHash 23ec85b7f1ed7fd34127cb26263c55f8
  */
 
 /* eslint-disable */
@@ -189,7 +189,7 @@ v5 = [
     "name": "game_players_list",
     "storageKey": null,
     "args": (v1/*: any*/),
-    "concreteType": "Player",
+    "concreteType": "GamePlayer",
     "plural": true,
     "selections": [
       (v2/*: any*/),

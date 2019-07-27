@@ -11,6 +11,7 @@ database.sqlite
 
 # Distribution / packaging
 .Python
+.buildcache/
 node_modules/
 build/
 develop-eggs/

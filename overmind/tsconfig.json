@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "incremental": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "outDir": "build/dist",
@@ -26,8 +27,7 @@
     "scripts",
     "acceptance-tests",
     "webpack",
-    "jest",
-    "src/setupTests.ts"
+    "jest"
   ],
   "types": ["typePatches"]
 }

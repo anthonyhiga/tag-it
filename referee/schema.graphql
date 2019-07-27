@@ -77,6 +77,17 @@ type Game {
   startedAt: String
 }
 
+type GamePlayer {
+  id: ID!
+  status: PlayerStatus!
+  ltTeamId: ID
+  ltPlayerId: ID
+  name: String
+  totemId: ID!
+  avatarUrl: String!
+  iconUrl: String!
+}
+
 type GamePlayerScore {
   id: ID!
   gameId: ID!
@@ -126,23 +137,12 @@ type Mutation {
   respond_arbiter_command(id: ID!, response: String, status: ArbiterCommandStatus!): ArbiterCommand
   file_basic_tag_report(report: BasicTagReport!): Game
   file_team_tag_report(report: TeamTagReport!): Game
-  joined_player(id: ID!, totemId: ID): Player!
+  joined_player(id: ID!, totemId: ID): GamePlayer!
   create_game(type: String!, name: String): Game
   end_game(id: ID!): Game
   update_game_settings(id: ID!, settings: GameSettings!): Game
   start_game(id: ID!): Game
   start_registration(id: ID!): Game
-}
-
-type Player {
-  id: ID!
-  status: PlayerStatus!
-  ltTeamId: ID
-  ltPlayerId: ID
-  name: String
-  totemId: ID!
-  avatarUrl: String!
-  iconUrl: String!
 }
 
 enum PlayerStatus {
@@ -161,7 +161,7 @@ type Query {
   game(id: ID!): Game
   active_games_list: [Game]
   game_settings(id: ID!): CurrentGameSettings
-  game_players_list(id: ID!): [Player]
+  game_players_list(id: ID!): [GamePlayer]
 }
 
 type ReportCheckListItem {
@@ -192,7 +192,7 @@ type Subscription {
   report_check_list: [ReportCheckListItem]
   games_list: [Game]
   active_games_list: [Game]
-  active_players_list: [Player]
+  active_players_list: [GamePlayer]
 }
 
 input TeamTagReport {

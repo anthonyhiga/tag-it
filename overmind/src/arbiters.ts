@@ -6,8 +6,9 @@
 import "graphql-import-node";
 
 import * as typeDefs from "./schema/arbiters.graphql";
-import Channels, { Channel } from "./channels";
+import Channels from "./channels";
 import Commands from "./commands";
+import { Channel } from "./base-types";
 
 import { PubSub, withFilter } from "apollo-server";
 import { makeExecutableSchema } from "graphql-tools";
@@ -27,12 +28,8 @@ export class Arbiters {
     onChannelUpdated?: (channel: Channel) => void;
   } = {};
 
-  addHandler = (id: string, name: HandlerType, method: () => void) => {
+  setHandler = (name: HandlerType, method: any) => {
     this.handlers[name] = method;
-  };
-
-  removeHandlers = (id: string) => {
-    this.handlers = {};
   };
 
   broadcastArbiterCommand = (message: Object) => {
@@ -80,7 +77,7 @@ export class Arbiters {
       name: string;
       type: string;
       status: string;
-      totemId: string;
+      totemId: number;
     }
   ) => {
     const channel: Channel = {
