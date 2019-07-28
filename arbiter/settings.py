@@ -35,7 +35,6 @@ def updateChannel(name, totemId, status, type):
             'status': status,
             'type': type,
             } )
-        print(result)
     except:
         type, value, traceback = sys.exc_info()
         print('Error opening %s: %s' % (value.filename, value.strerror))
@@ -55,7 +54,6 @@ def registerArbiter():
         """
         
         result = ws.query(query, variables={'id': serialNumber})
-        print(result)
     except:
         type, value, traceback = sys.exc_info()
         print('Error opening %s: %s' % (value.filename, value.strerror))

@@ -17,7 +17,6 @@ def joinedPlayer(id, totemId):
             'id': id,
             'totemId': totemId,
             })
-        print(result)
     except:
         type, value, traceback = sys.exc_info()
         print('Error opening %s: %s' % (value.filename, value.strerror))
@@ -37,7 +36,6 @@ def fileBasicReport(report):
         result = ws.query(query, variables={
             'report': report,
             })
-        print(result)
     except:
         type, value, traceback = sys.exc_info()
         print('Error opening %s: %s' % (value.filename, value.strerror))
@@ -57,7 +55,6 @@ def fileTeamReport(report):
         result = ws.query(query, variables={
             'report': report,
             })
-        print(result)
     except:
         type, value, traceback = sys.exc_info()
         print('Error opening %s: %s' % (value.filename, value.strerror))

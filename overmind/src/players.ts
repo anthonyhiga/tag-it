@@ -27,6 +27,11 @@ class Players {
     });
   }
 
+  clear() {
+    this.data = {};
+    this.runHandlers();
+  }
+
   hasActivePlayers() {
     return (
       Object.values(this.data).find(player => player.status === "ACTIVE") !=

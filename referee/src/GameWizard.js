@@ -539,7 +539,9 @@ const GameScoreBoard = (props) => {
       }
       const playerMap = {};
       props.game_players_list.forEach(item => {
-        playerMap[item.id] = item;
+        if (item != null) { 
+          playerMap[item.id] = item;
+        }
       });
       const gameScore = [...props.game_score];
       return <><Table size="small">
@@ -558,7 +560,7 @@ const GameScoreBoard = (props) => {
         {gameScore.map(item => (
           <TableRow>
           <TableCell>{item.playerId}</TableCell>
-          <TableCell>{playerMap[item.playerId].name}</TableCell>
+          <TableCell>{playerMap[item.playerId] && playerMap[item.playerId].name}</TableCell>
           <TableCell>{item.ltTeamId}</TableCell>
           <TableCell>{item.ltPlayerId}</TableCell>
           <TableCell>{item.totalTagsGiven}</TableCell>

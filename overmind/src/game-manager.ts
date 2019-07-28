@@ -349,6 +349,9 @@ export class GameManager {
     );
     this.gameMachineCache[game.id] = machine;
 
+    // Clear the players cache
+    players.clear();
+
     // Boot up this game machine
     machine.start();
 
@@ -534,7 +537,7 @@ export class GameManager {
         games_list: async () => await Game.findAll(),
         game_players_list: async () => {
           // For now we'll return the active cache
-          return players.getActiveGamePlayers();
+          return players.getActivePlayers();
         },
         active_games_list: async () =>
           await Game.findAll({
