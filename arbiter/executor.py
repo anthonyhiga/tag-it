@@ -8,7 +8,7 @@ from enum import Enum
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) 
 
 from tagit.bus import MessageInputStream, MessageOutputStream
-from tagit.packet_send import genAnnounceGame, genJoinConfirmed,\
+from tagit.packet_send import genZoneBeacon, genTag, genAnnounceGame, genJoinConfirmed,\
         genChannelFailure, genCountdown, genRequestTagReport 
 from tagit.packet_receive import decodeMessage, MessageType 
 
@@ -34,6 +34,7 @@ class Executor(object):
         self.handlers = handlers
         self.totemId = None
         self.reportCheckList = []
+        self.gameActive = False
 
         self.outputStream = MessageOutputStream(outputPort)
         self.inputStream = MessageInputStream(inputPort, {
@@ -65,6 +66,10 @@ class Executor(object):
                 state = 'REQUESTING'
 
         self.handlers['onChannelUpdated'](self.name, self.type, self.totemId, state) 
+
+    def reset(self):
+        self.gameActive = False
+        self.stopAddPlayer()
 
     def stopAddPlayer(self):
         self.setPlayerState(AddPlayerState.COMPLETE)
@@ -237,6 +242,7 @@ class Executor(object):
 
     def startGame(self, gameId, countDownSec, team1Count, team2Count, team3Count):
         print("START - BEGINNING COUNTDOWN")
+        self.gameActive = True
 
         # Start Countdown
         for count in range(countDownSec, -1, -1):
@@ -269,6 +275,43 @@ class Executor(object):
         self.addPlayerCount = self.addPlayerCount + 1
         thread = Thread(target=self.playerLoop)
         thread.start()
+
+    def createZones(self, zones): 
+        self.zones = zones
+        thread = Thread(target=self.zoneLoop)
+        thread.start()
+
+    def zoneLoop(self):
+        time = 0
+        while(True and len(self.zones) > 0):
+          sleep(0.01);
+          time = time + 10
+
+          if not self.gameActive:
+              continue
+
+          for zone in self.zones:
+              if (time % zone['delay'] != 0):
+                  continue
+
+              if zone.type == "HOSTILE":
+                player = 4
+                if zone['team'] == 1:
+                    player = 5
+                if zone['team'] == 2:
+                    player = 6 
+                if zone['team'] == 3:
+                    player = 7
+
+                tag = genTag(0, player, zone['strength'])
+                self.outputStream.send(tag)
+              elif zone.type == "SUPPLY":
+                beacon = genZoneBeacon(zone['team'], "SUPPLY")
+                self.outputStream.send(beacon)
+              elif zone.type == "CONTESTED":
+                beacon = genZoneBeacon(0, "CONTESTED")
+                self.outputStream.send(beacon)
+
 
     def playerLoop(self):
         print("PLAYER - SEARCHING FOR NEW PLAYER")

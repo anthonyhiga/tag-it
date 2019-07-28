@@ -42,6 +42,12 @@ export class RunningState extends BaseState<{
     });
   }
 
+  onLeave() {
+    arbiters.broadcastArbiterCommand({
+      type: "RESET"
+    });
+  }
+
   model() {
     return {
       ...DEFAULT_SM_MODEL

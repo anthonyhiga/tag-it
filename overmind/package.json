@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "prestart" : "npm run build",
+    "start": "cd build/dist && node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db": "sh db.sh",
     "schema": "apollo-codegen generate **/*.graphql --target typescript --output operation-result-types.ts",

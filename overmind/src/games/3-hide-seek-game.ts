@@ -8,14 +8,14 @@ import {
   DEFAULT_GAME_SETTINGS
 } from "../base-types";
 
-import createGame from "./base-team-game";
+import createGame from "./base-hide-seek-game";
 
 const builder: GameMachineBuilder<StateMachine<SMProps, SMModel>> = {
-  type: "3-team-game",
+  type: "hunter-hunted-game",
   description:
-    "Players are separated into 3 teams.  Team members cannot shoot each other.",
-  name: "3 Team Game",
-  iconUrl: "https://images.unsplash.com/photo-1546712973-a095470a4ef2",
+    "3 Teams Alternate Between Hunting and being Hunted by Each other, every 1 minute.",
+  name: "Hunter and Hunted",
+  iconUrl: "https://images.unsplash.com/photo-1525779350160-30931cbc2aac",
   build: (
     game: Game,
     onGameSettingsUpdate: (settings: GameSettings) => void
@@ -23,8 +23,10 @@ const builder: GameMachineBuilder<StateMachine<SMProps, SMModel>> = {
     return createGame(
       {
         ...DEFAULT_GAME_SETTINGS,
-        totalTeams: 3, // Default to 2 Teams
-        gameType: "3-TEAMS"
+        gameType: "HUNTER-HUNTED",
+        gameLengthInMin: 6,
+        totalTeams: 3,
+        options: ["team_1_hunts_first"]
       },
       game,
       onGameSettingsUpdate

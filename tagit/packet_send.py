@@ -2,6 +2,37 @@ from .bus import MessageBuilder
 import sys 
 import traceback
 
+
+########################################################################
+#
+#  Generate Beacon Message
+#
+########################################################################
+def genZoneBeacon(team, type):
+    value = 0
+    if (type == "CONTESTED"):
+        value = 2
+    elif (type == "SUPPLY"):
+        value = 3
+
+    return MessageBuilder().beacon()\
+           .team(team)\
+           .zero()\
+           .number2bit(value)\
+           .toMessage()
+
+########################################################################
+#
+#  Generate Tag Message
+#
+########################################################################
+def genTag(team, playerId, strength):
+    return MessageBuilder().tag()\
+           .team(team)\
+           .player(playerId)\
+           .number2bit(strength)\
+           .toMessage()
+
 ########################################################################
 #
 #  Generate Countdown Message
@@ -66,7 +97,7 @@ def genAnnounceGame(gameType, gameId, gameLengthInMin, health, reloads, shields,
         flag1 = flag1 | (1<<4) 
     elif 'medic_mode' in options:
         flag1 = flag1 | (1<<3) 
-    elif 'show_tags' in options:
+    elif 'slow_tags' in options:
         flag1 = flag1 | (1<<2) 
     elif 'team_1_hunts_first' in options:
         flag1 = flag1 | (1<<1) 

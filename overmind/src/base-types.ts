@@ -68,7 +68,7 @@ export interface GameSettings {
   megatags: number;
   totalTeams: number;
   gameType: string;
-  options?: [];
+  options?: string[];
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {

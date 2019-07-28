@@ -64,6 +64,18 @@ channels = {
     }) 
 }
 
+channels['main'].createZones([
+    #{
+    #    'delay': 500,
+    #    'type': 'SUPPLY',
+    #    'team': 0,
+    #},
+    {
+        'delay': 500,
+        'type': 'CONTESTED',
+    },
+])
+
 totems = {
     'main': TotemPort(17,18,27, channels['main'].setTotemId)
 }
@@ -80,6 +92,7 @@ def runCommand(raw):
     print('RECEIVED COMMAND: ' + type)
 
     if type == 'START_GAME': 
+        print("GAME START - COUNDOWN")
         channel = channels['main']
         channel.startGame(
                 command['gameId'],
@@ -111,8 +124,9 @@ def runCommand(raw):
         channel.stopAddPlayer()
 
     if type == 'RESET':
+        print("GAME OVER - RESETTING")
         channel = channels['main']
-        channel.stopAddPlayer()
+        channel.reset()
 
 def updateList(checkList):
     channel = channels['main']
