@@ -7,8 +7,9 @@ export class ScoringState extends BaseState<{
   game: Game;
   settings: GameSettings;
   teams: GameTeam[];
+  onComplete: () => void;
 }> {
-  onScoringStarted() {
+  onEnter() {
     manager.updateGameState(this.props.game.id, "SCORING");
 
     const activePlayers = players.getActivePlayers();
@@ -24,7 +25,9 @@ export class ScoringState extends BaseState<{
     manager.scoreGame(playerMap, this.props.settings.reportTimeLimitSec * 1000);
   }
 
-  onFinalScore() {}
+  onFinalScore = () => {
+    this.props.onComplete();
+  };
 
   onGameEnd = () => {
     manager.updateGameState(this.props.game.id, "COMPLETE");
@@ -33,7 +36,8 @@ export class ScoringState extends BaseState<{
   model() {
     return {
       ...DEFAULT_SM_MODEL,
-      onGameEnd: this.onGameEnd
+      onGameEnd: this.onGameEnd,
+      onFinalScore: this.onFinalScore
     };
   }
 }

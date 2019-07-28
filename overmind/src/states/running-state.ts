@@ -28,6 +28,7 @@ export class RunningState extends BaseState<{
 
     this.gameTimer = setTimeout(() => {
       // Game Over
+      console.warn("GAME OVER");
       this.props.onScoreGame();
     }, gameLength * 1000);
 

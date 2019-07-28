@@ -2,8 +2,6 @@ import { BaseState } from "./base-state";
 import { Game, GameSettings, GameTeam, DEFAULT_SM_MODEL } from "../base-types";
 import manager from "../game-manager";
 
-const DEFAULT_TEAM = { count: 0, players: [] };
-
 export class SetupState extends BaseState<{
   onRegister: () => void;
   game: Game;
@@ -15,7 +13,7 @@ export class SetupState extends BaseState<{
   setTeams: (teams: GameTeam[]) => void;
 }> {
   buildTeam(id: number) {
-    return { id, ...DEFAULT_TEAM };
+    return { id, count: 0, players: [] };
   }
 
   updateSettings(settings: GameSettings) {

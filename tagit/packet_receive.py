@@ -132,7 +132,8 @@ def decodeMessage(message):
     else:
         try:
             messageType = MessageType(message[0])
-            print("RECEIVED UNHANDLED MESSAGE: " + messageType.name);
+            # Disabling since it's just noise for now
+            #print("RECEIVED UNHANDLED MESSAGE: " + messageType.name);
         except:
             print("RECEIVED UNKNOWN MESSAGE: " + str(message[0]));
 

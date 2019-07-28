@@ -11,6 +11,7 @@ import { SetupState } from "../states/setup-state";
 import { RegistrationState } from "../states/registration-state";
 import { RunningState } from "../states/running-state";
 import { ScoringState } from "../states/scoring-state";
+import { CompleteState } from "../states/complete-state";
 
 const createMachine = (
   game: Game,
@@ -50,7 +51,11 @@ const createMachine = (
       scoring: new ScoringState(() => ({
         game: game,
         settings: machine.variable("settings"),
-        teams: machine.variable("teams")
+        teams: machine.variable("teams"),
+        onComplete: machine.goto("complete")
+      })),
+      complete: new CompleteState(() => ({
+        game: game
       }))
     }
   }));

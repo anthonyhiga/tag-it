@@ -236,6 +236,12 @@ export class GameManager {
           game_score: scores
         });
 
+        if (gameId && this.gameMachineCache[gameId]) {
+          this.gameMachineCache[gameId]
+            .model()
+            .onFinalScore(finalScore)
+        }
+
         this.reportCheckListCache = {};
         this.reportBasicScoreCache = {};
         this.reportTeamScoreCache = {};
@@ -528,7 +534,7 @@ export class GameManager {
         games_list: async () => await Game.findAll(),
         game_players_list: async () => {
           // For now we'll return the active cache
-          return players.getActivePlayers();
+          return players.getActiveGamePlayers();
         },
         active_games_list: async () =>
           await Game.findAll({

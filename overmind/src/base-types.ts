@@ -67,6 +67,7 @@ export interface GameSettings {
   shields: number;
   megatags: number;
   totalTeams: number;
+  gameType: string;
   options?: [];
 }
 
@@ -78,7 +79,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
     channel: {}
   },
   reportTimeLimitSec: 120,
-  reportDelaySec: 20,
+  reportDelaySec: 1,
   countDownSec: 30,
   gameLengthInMin: 5, // five minute game
   health: 35,
@@ -86,6 +87,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   shields: 99,
   megatags: 0,
   totalTeams: 1,
+  gameType: "CUSTOM",
   options: []
 };
 
@@ -114,6 +116,7 @@ export interface SMModel {
   onChannelUpdated: (channel: Channel) => void;
   onPlayerJoined: (id: number, totemId: number) => void;
   onGameStart: () => void;
+  onFinalScore: (score: any) => void;
 }
 
 const DEFAULT_HANDLER = (name: string) => () => {
@@ -126,7 +129,8 @@ export const DEFAULT_SM_MODEL: SMModel = {
   onRegistrationStart: DEFAULT_HANDLER("onRegistrationStart"),
   onChannelUpdated: DEFAULT_HANDLER("onChannelUpdated"),
   onPlayerJoined: DEFAULT_HANDLER("onPlayerJoined"),
-  onGameStart: DEFAULT_HANDLER("onGameStart")
+  onGameStart: DEFAULT_HANDLER("onGameStart"),
+  onFinalScore: DEFAULT_HANDLER("onFinalScore")
 };
 
 export interface GameMachineBuilder<SM> {

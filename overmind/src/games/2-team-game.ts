@@ -11,6 +11,7 @@ import { SetupState } from "../states/setup-state";
 import { RegistrationState } from "../states/registration-state";
 import { RunningState } from "../states/running-state";
 import { ScoringState } from "../states/scoring-state";
+import { CompleteState } from "../states/complete-state";
 
 const createMachine = (
   game: Game,
@@ -19,7 +20,8 @@ const createMachine = (
   const sm = new StateMachine<SMProps, SMModel>({
     settings: {
       ...DEFAULT_GAME_SETTINGS,
-      totalTeams: 2 // Default to 2 Teams
+      totalTeams: 2, // Default to 2 Teams
+      gameType: "2-TEAMS"
     },
     onGameSettingsUpdate
   });
@@ -51,7 +53,11 @@ const createMachine = (
       scoring: new ScoringState(() => ({
         game: game,
         settings: machine.variable("settings"),
-        teams: machine.variable("teams")
+        teams: machine.variable("teams"),
+        onComplete: machine.goto("complete")
+      })),
+      complete: new CompleteState(() => ({
+        game: game
       }))
     }
   }));
