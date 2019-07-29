@@ -3,7 +3,7 @@ import React from 'react';
 import {commitMutation} from 'react-relay';
 import graphql from 'babel-plugin-relay/macro';
 
-import environment from './SubEnvironment.js';
+import environment from './Environment.js';
 
 import Button from '@material-ui/core/Button';
 import Zoom from '@material-ui/core/Zoom';

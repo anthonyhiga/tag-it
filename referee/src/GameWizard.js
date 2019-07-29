@@ -2,7 +2,7 @@ import React from 'react';
 import {QueryRenderer, requestSubscription, commitMutation} from 'react-relay';
 import graphql from 'babel-plugin-relay/macro';
 
-import environment from './SubEnvironment.js';
+import environment from './Environment.js';
 
 import { makeStyles } from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';

@@ -3,8 +3,7 @@ import logo from './logo.svg';
 import {QueryRenderer, requestSubscription} from 'react-relay';
 import graphql from 'babel-plugin-relay/macro';
 
-//import environment from './Environment.js';
-import environment from './SubEnvironment';
+import environment from './Environment.js';
 import GameWizard from './GameWizard';
 
 import 'typeface-roboto';
