@@ -15,7 +15,7 @@ const builder: GameMachineBuilder<StateMachine<SMProps, SMModel>> = {
   description:
     "2 Teams alternate between hiding and seeking every 1 minute. Starting team randomly chosen.",
   name: "Hide And Seek",
-  iconUrl: "https://images.unsplash.com/photo-1481140717212-b0124736c90a",
+  iconUrl: "blank",
   build: (
     game: Game,
     onGameSettingsUpdate: (settings: GameSettings) => void

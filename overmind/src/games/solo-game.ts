@@ -14,7 +14,7 @@ const builder: GameMachineBuilder<StateMachine<SMProps, SMModel>> = {
   type: "solo-game",
   description: "Every Player for themselves.",
   name: "Solo Game",
-  iconUrl: "https://images.unsplash.com/photo-1541514080602-12461f46d005",
+  iconUrl: "blank",
   build: (
     game: Game,
     onGameSettingsUpdate: (settings: GameSettings) => void

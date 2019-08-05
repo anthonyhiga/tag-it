@@ -54,6 +54,7 @@ export interface GameSettings {
     requestToAssign: boolean;
     requireTotem: boolean;
     registeredTotemsOnly: boolean;
+    requireHolsterOnly: boolean;
     channel: {
       [channelName: string]: { teamId: number };
     };
@@ -75,6 +76,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   assignment: {
     requestToAssign: false,
     requireTotem: false,
+    requireHolsterOnly: true,
     registeredTotemsOnly: false,
     channel: {}
   },

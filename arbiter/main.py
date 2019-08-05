@@ -56,7 +56,13 @@ def onTeamReport(gameId, report):
     })
 
 channels = {
-    'main': Executor('main', 'AREA', 3, 4, {
+    'main': Executor('main', 'AREA', 23, 24, {
+        'onChannelUpdated': onChannelUpdated,
+        'onPlayerAdded': onPlayerAdded,
+        'onBasicReport': onBasicReport,
+        'onTeamReport': onTeamReport,
+    }),
+    'holster': Executor('holster', 'HOLSTER', 3, 4, {
         'onChannelUpdated': onChannelUpdated,
         'onPlayerAdded': onPlayerAdded,
         'onBasicReport': onBasicReport,
@@ -76,34 +82,28 @@ channels['main'].createZones([
     },
 ])
 
-totems = {
-    'main': TotemPort(17,18,27, channels['main'].setTotemId)
-}
+#totems = {
+#    'main': TotemPort(17,18,27, channels['main'].setTotemId)
+#}
 
 def onReconnected():
-    channel = channels['main']
-    channel.requestChannelUpdate()
+    for channel in channels:
+        channels[channel].requestChannelUpdate()
 
-def runCommand(raw):
-    command = loads(raw)
+def runCommandOnChannel(command, channel):
     type = command['type']
-    channel = command.get('channel')
-
-    print('RECEIVED COMMAND: ' + type)
 
     if type == 'START_GAME': 
         print("GAME START - COUNDOWN")
-        channel = channels['main']
         channel.startGame(
-                command['gameId'],
-                command['countDownSec'],
-                command['team1Count'],
-                command['team2Count'],
-                command['team3Count'],
+            command['gameId'],
+            command['countDownSec'],
+            command['team1Count'],
+            command['team2Count'],
+            command['team3Count'],
         )
 
     if type == 'ADD_PLAYER':
-        channel = channels['main']
         channel.addPlayer(
                 command['id'],
                 command['gameType'],
@@ -120,17 +120,29 @@ def runCommand(raw):
         )
 
     if type == 'STOP_ADD_PLAYER':
-        channel = channels['main']
         channel.stopAddPlayer()
 
     if type == 'RESET':
         print("GAME OVER - RESETTING")
-        channel = channels['main']
         channel.reset()
 
+def runCommand(raw):
+    command = loads(raw)
+    type = command['type']
+
+    channelName = command.get('channel')
+    if channelName == None:
+        print('RECEIVED GLOBAL COMMAND: ' + str(type))
+        for channel in channels:
+            runCommandOnChannel(command, channels[channel])
+    else:
+        print('RECEIVED COMMAND: ' + str(type) + ' channel: ' + str(channelName))
+        channel = channels[channelName]
+        runCommandOnChannel(command, channel)
+
 def updateList(checkList):
-    channel = channels['main']
-    channel.requestTagReports(checkList) 
+    for channel in channels:
+      channels[channel].requestTagReports(checkList) 
 
 registerArbiter()
 subscribeSettings()

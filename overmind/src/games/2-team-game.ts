@@ -15,7 +15,7 @@ const builder: GameMachineBuilder<StateMachine<SMProps, SMModel>> = {
   description:
     "Players are separated into 2 teams.  Team members cannot shoot each other.",
   name: "2 Team Game",
-  iconUrl: "https://images.unsplash.com/photo-1545114010-4e20f94c7349",
+  iconUrl: "blank",
   build: (
     game: Game,
     onGameSettingsUpdate: (settings: GameSettings) => void

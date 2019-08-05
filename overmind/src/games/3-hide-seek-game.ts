@@ -15,7 +15,7 @@ const builder: GameMachineBuilder<StateMachine<SMProps, SMModel>> = {
   description:
     "3 Teams Alternate Between Hunting and being Hunted by Each other, every 1 minute.",
   name: "Hunter and Hunted",
-  iconUrl: "https://images.unsplash.com/photo-1525779350160-30931cbc2aac",
+  iconUrl: "blank",
   build: (
     game: Game,
     onGameSettingsUpdate: (settings: GameSettings) => void

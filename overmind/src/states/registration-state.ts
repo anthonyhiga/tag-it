@@ -141,6 +141,17 @@ export class RegistrationState extends BaseState<{
     ) {
       if (channel.totemId == null) {
         console.log("CHANNEL HAS NO TOTEM, IGNORING");
+        return;
+      }
+    }
+
+    if (
+      this.props.settings.assignment &&
+      this.props.settings.assignment.requireHolsterOnly
+    ) {
+      if (channel.type !== "HOLSTER") {
+        console.log("CHANNEL IS NOT A HOLSTER, IGNORING");
+        return;
       }
     }
 
@@ -189,7 +200,9 @@ export class RegistrationState extends BaseState<{
       "ASSIGNING TO: " +
         player.ltTeamId +
         " TEAM PLAYER ID: " +
-        player.ltPlayerId
+        player.ltPlayerId +
+        " CHANNEL: " +
+        channel.name
     );
 
     arbiters.sendArbiterCommand(channel.arbiterId, {

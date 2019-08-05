@@ -219,12 +219,9 @@ class MessageOutputStream(object):
             self.pi.write(self.id, 0)
             self.q.task_done()
 
-output = MessageOutputStream(3)
+output = MessageOutputStream(24)
 
 message = MessageBuilder().tag().team(0).player(1).number2bit(0).toMessage() 
-output.send(message)
-sleep(1)
-output.send(message)
-sleep(1)
-output.send(message)
-sleep(10)
+while True:
+  output.send(message)
+  sleep(2)

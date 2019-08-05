@@ -44,12 +44,11 @@ class InputBound(Enum):
     MID = 3
     IGNORE = 4
 
-def calculateBounds(duration, ignore): 
-    margin = 450 # nano second margin
+def calculateBounds(duration, ignore, lowerMargin, upperMargin): 
     return { 
-        InputBound.LOW: duration - margin,
+        InputBound.LOW: duration - lowerMargin,
         InputBound.MID: duration,
-        InputBound.HIGH: duration + margin,
+        InputBound.HIGH: duration + upperMargin,
         InputBound.IGNORE: ignore,
     }
 
@@ -59,17 +58,17 @@ def calculateBounds(duration, ignore):
 #  These numbers are derived off LTAP protocol
 EventBounds = {
     InputDirection.RISE: {
-        EventType.ZERO: calculateBounds(1000, False),
-        EventType.ONE: calculateBounds(2000, False),
-        EventType.START: calculateBounds(3000, False),
-        EventType.BEACON: calculateBounds(6000, False),
+        EventType.ZERO: calculateBounds(1000, False, 500, 500),
+        EventType.ONE: calculateBounds(2000, False, 500, 500),
+        EventType.START: calculateBounds(3000, False, 500, 2000),
+        EventType.BEACON: calculateBounds(6000, False, 1000, 1000),
     },
     InputDirection.VALLEY: {
-        EventType.DELIMITER: calculateBounds(2000, False),
-        EventType.PREAMBLE: calculateBounds(6000, False),
-        EventType.PAUSE: calculateBounds(25000, True),
-        EventType.END: calculateBounds(80000, True),
-        EventType.FIRED: calculateBounds(56000, True),
+        EventType.DELIMITER: calculateBounds(2000, False, 1000, 1000),
+        EventType.PREAMBLE: calculateBounds(6000, False, 1000, 1000),
+        EventType.PAUSE: calculateBounds(25000, True, 0, 0),
+        EventType.END: calculateBounds(80000, True, 0, 0),
+        EventType.FIRED: calculateBounds(56000, True, 56000, 56000),
     }
 }
 
@@ -360,9 +359,11 @@ class MessageInputStream(object):
                 eventType = key
 
         if (eventType == EventType.UNKNOWN):
+            # print("UNKNOWN -------------------- " + str(durationNS))
             self.parseEnd()
             self.stream = []
         else:
+            # print(eventType)
             self.stream.append(eventType)
 
             if (eventType == EventType.ONE or eventType == EventType.ZERO):
@@ -517,7 +518,6 @@ class MessageBuilder(object):
 
         return self
 
-
 #
 # Message Sender
 #
@@ -526,7 +526,7 @@ class MessageOutputStream(object):
         print("STARTING SENDER ON GPIO: " + str(id))
         self.id = id
 
-        self.q = Queue()
+        self.q = Queue() 
         self.pi = pi()
         self.buildWaveForms()
 
@@ -538,7 +538,7 @@ class MessageOutputStream(object):
         return self.pi.wave_create()
 
     def buildWaveForms(self):
-        self.pi.wave_clear();
+        #self.pi.wave_clear();
         self.rise = {
                 1000: self.defineWave(self.carrier38khz(1000)),
                 2000: self.defineWave(self.carrier38khz(2000)),
@@ -589,6 +589,8 @@ class MessageOutputStream(object):
             # without python performance getting in the way
             #
             wave = []
+            duration = 0
+            totalDuration = 0
 
             for item in message:
                 if (item in EventBounds[InputDirection.RISE]): 
@@ -601,10 +603,11 @@ class MessageOutputStream(object):
                     part = self.valley[duration]
                     wave.append(part)
 
+                totalDuration = totalDuration + duration
+
             self.pi.wave_chain(wave)
 
-            while self.pi.wave_tx_busy():
-                sleep(0.0001)
+            sleep(1.1 * (totalDuration / 1000000))
 
             self.pi.write(self.id, 0)
             self.q.task_done()
