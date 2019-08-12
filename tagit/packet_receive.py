@@ -92,7 +92,6 @@ def decodeMessage(message):
           'type': MessageType(message[0]),
           'gameId': message[1],
           'taggerId': message[2],
-          'preferredTeam': message[3] & 0x3,
         }
     elif (type == MessageType.CHANNEL_RELEASE.value):
         return {

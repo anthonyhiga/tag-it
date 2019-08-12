@@ -1,7 +1,7 @@
 import sys, traceback, os
 from signal import pause 
-from time import sleep
-from threading import Timer, Thread 
+from time import sleep, monotonic
+from threading import Timer, Thread, Lock
 from gpiozero import Button
 from enum import Enum
 
@@ -38,7 +38,7 @@ class Executor(object):
 
         self.log("CHANNEL - SETUP INPUT: " + str(inputPort) + " OUTPUT: " + str(outputPort))
 
-        self.outputStream = MessageOutputStream(outputPort)
+        self.outputStream = MessageOutputStream(outputPort, self.isBusy)
         self.inputStream = MessageInputStream(inputPort, {
             'onPacket': self.onMessage,
             'onStandardBeacon': self.onStandardBeacon,
@@ -50,12 +50,15 @@ class Executor(object):
 
         self.setPlayerState(AddPlayerState.COMPLETE)
         self.addPlayerRequest = False
-        self.addPlayerCount = 0
+        self.addPlayerThread = None
 
         thread = Thread(target=self.reportMonitor)
         thread.start()
 
         self.reportThread = thread
+
+    def isBusy(self, busy):
+        self.inputStream.setSilent(busy)
 
     def log(self, message):
         print(self.name + ':' + message);
@@ -83,7 +86,6 @@ class Executor(object):
         self.addPlayerMessage = None
         self.addPlayerFailedMessage = None
         self.addPlayerFailedCount = 6 
-        self.addPlayerCount = self.addPlayerCount + 1
         self.onChannelUpdate()
 
     def requestPlayer(self):
@@ -93,7 +95,7 @@ class Executor(object):
     def setTotemId(self, totemId):
         self.log("TOTEM - SETTING TOTEM TO: " + str(totemId))
         self.totemId = totemId
-        self.onChannelUpdate()
+        self.requestPlayer()
 
     def onStandardBeacon(self, team, tag): 
         # Ignore for now
@@ -266,7 +268,6 @@ class Executor(object):
         self.setPlayerState(AddPlayerState.ADVERTISE)
         self.onChannelUpdate()
 
-        self.addPlayerCount = self.addPlayerCount + 1
         thread = Thread(target=self.playerLoop)
         thread.start()
 
@@ -317,8 +318,9 @@ class Executor(object):
 
     def playerLoop(self):
         self.log("PLAYER - SEARCHING FOR NEW PLAYER")
-        instanceId = self.addPlayerCount
-        while(self.addPlayerState != AddPlayerState.COMPLETE and self.addPlayerCount == instanceId):
+        id = monotonic()
+        self.addPlayerID = id 
+        while(self.addPlayerState != AddPlayerState.COMPLETE and self.addPlayerID == id):
             if (self.addPlayerState == AddPlayerState.ADVERTISE):
                 self.outputStream.send(self.addPlayerMessage)
                 sleep(1.5)
@@ -327,7 +329,7 @@ class Executor(object):
                 # wait 2 seconds for confirmation if none found, we
                 # consider it failed and send out a failure 6 times
                 sleep(2)
-                if (self.addPlayerState == AddPlayerState.ASSIGNED and self.addPlayerCount == instanceId):
+                if (self.addPlayerState == AddPlayerState.ASSIGNED and self.addPlayerID == id):
                     self.setPlayerState(AddPlayerState.FAILED)
                     self.onChannelUpdate()
 
@@ -337,7 +339,7 @@ class Executor(object):
                 self.addPlayerFailedCount = self.addPlayerFailedCount - 1
                 sleep(0.5)
 
-                if (self.addPlayerFailedCount <= 0 and self.addPlayerCount == instanceId):
+                if (self.addPlayerFailedCount <= 0 and self.addPlayerID == id):
                     self.log("PLAYER - SEARCH RESTARTED FOR NEW PLAYER")
                     self.setPlayerState(AddPlayerState.ADVERTISE)
                     self.onChannelUpdate()

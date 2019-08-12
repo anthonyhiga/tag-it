@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from executor import Executor
 
-from totem import TotemPort 
+from rfid import RFID
 
 #
 # NOTE: for now we'll assume all arbiters have just 1 port, however
@@ -22,7 +22,6 @@ from totem import TotemPort
 #     Unless, you are making a shooting gallery...
 #       food for thought.
 #
-
 
 def onChannelUpdated(name, type, totemId, state):
     updateChannel(name, totemId, state, type)
@@ -76,15 +75,15 @@ channels['main'].createZones([
     #    'type': 'SUPPLY',
     #    'team': 0,
     #},
-    {
-        'delay': 500,
-        'type': 'CONTESTED',
-    },
+    #{
+    #    'delay': 500,
+    #    'type': 'CONTESTED',
+    #},
 ])
 
-#totems = {
-#    'main': TotemPort(17,18,27, channels['main'].setTotemId)
-#}
+totems = {
+    'holster': RFID(channels['holster'].setTotemId)
+}
 
 def onReconnected():
     for channel in channels:

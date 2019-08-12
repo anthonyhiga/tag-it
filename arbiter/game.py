@@ -3,6 +3,9 @@ from network import getSocket, serialNumber
 from signal import pause 
 
 def joinedPlayer(id, totemId):
+    print(id)
+    print(totemId)
+
     try:
         ws = getSocket()
         query = """
