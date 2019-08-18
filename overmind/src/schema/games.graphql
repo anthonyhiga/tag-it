@@ -56,6 +56,9 @@
     ltTagTeamId: ID
     type: ReportType!
     status: ReportStatusType!
+    name: String
+    avatarUrl: String
+    iconUrl: String
   }
 
   type GameType {

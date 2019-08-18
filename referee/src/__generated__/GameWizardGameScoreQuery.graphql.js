@@ -1,6 +1,6 @@
 /**
  * @flow
- * @relayHash 23ec85b7f1ed7fd34127cb26263c55f8
+ * @relayHash aa727d39375b1dfddbe3ce0e9df332dc
  */
 
 /* eslint-disable */
@@ -37,6 +37,15 @@ export type GameWizardGameScoreQueryResponse = {|
     +avatarUrl: string,
     +iconUrl: string,
   |}>,
+  +game_settings: ?{|
+    +countDownSec: ?number,
+    +gameLengthInMin: ?number,
+    +health: ?number,
+    +reloads: ?number,
+    +shields: ?number,
+    +megatags: ?number,
+    +totalTeams: ?number,
+  |},
 |};
 export type GameWizardGameScoreQuery = {|
   variables: GameWizardGameScoreQueryVariables,
@@ -71,6 +80,15 @@ query GameWizardGameScoreQuery(
     totemId
     avatarUrl
     iconUrl
+  }
+  game_settings(id: $id) {
+    countDownSec
+    gameLengthInMin
+    health
+    reloads
+    shields
+    megatags
+    totalTeams
   }
 }
 */
@@ -231,6 +249,66 @@ v5 = [
         "storageKey": null
       }
     ]
+  },
+  {
+    "kind": "LinkedField",
+    "alias": null,
+    "name": "game_settings",
+    "storageKey": null,
+    "args": (v1/*: any*/),
+    "concreteType": "CurrentGameSettings",
+    "plural": false,
+    "selections": [
+      {
+        "kind": "ScalarField",
+        "alias": null,
+        "name": "countDownSec",
+        "args": null,
+        "storageKey": null
+      },
+      {
+        "kind": "ScalarField",
+        "alias": null,
+        "name": "gameLengthInMin",
+        "args": null,
+        "storageKey": null
+      },
+      {
+        "kind": "ScalarField",
+        "alias": null,
+        "name": "health",
+        "args": null,
+        "storageKey": null
+      },
+      {
+        "kind": "ScalarField",
+        "alias": null,
+        "name": "reloads",
+        "args": null,
+        "storageKey": null
+      },
+      {
+        "kind": "ScalarField",
+        "alias": null,
+        "name": "shields",
+        "args": null,
+        "storageKey": null
+      },
+      {
+        "kind": "ScalarField",
+        "alias": null,
+        "name": "megatags",
+        "args": null,
+        "storageKey": null
+      },
+      {
+        "kind": "ScalarField",
+        "alias": null,
+        "name": "totalTeams",
+        "args": null,
+        "storageKey": null
+      }
+    ]
   }
 ];
 return {
@@ -253,11 +331,11 @@ return {
     "operationKind": "query",
     "name": "GameWizardGameScoreQuery",
     "id": null,
-    "text": "query GameWizardGameScoreQuery(\n  $id: ID!\n) {\n  game_score(id: $id) {\n    id\n    gameId\n    teamId\n    playerId\n    totalTagsReceived\n    totalTagsGiven\n    survivedTimeSec\n    zoneTimeSec\n    ltGameId\n    ltTeamId\n    ltPlayerId\n  }\n  game_players_list(id: $id) {\n    id\n    status\n    ltTeamId\n    ltPlayerId\n    name\n    totemId\n    avatarUrl\n    iconUrl\n  }\n}\n",
+    "text": "query GameWizardGameScoreQuery(\n  $id: ID!\n) {\n  game_score(id: $id) {\n    id\n    gameId\n    teamId\n    playerId\n    totalTagsReceived\n    totalTagsGiven\n    survivedTimeSec\n    zoneTimeSec\n    ltGameId\n    ltTeamId\n    ltPlayerId\n  }\n  game_players_list(id: $id) {\n    id\n    status\n    ltTeamId\n    ltPlayerId\n    name\n    totemId\n    avatarUrl\n    iconUrl\n  }\n  game_settings(id: $id) {\n    countDownSec\n    gameLengthInMin\n    health\n    reloads\n    shields\n    megatags\n    totalTeams\n  }\n}\n",
     "metadata": {}
   }
 };
 })();
 // prettier-ignore
-(node/*: any*/).hash = '3fcb610d7ea26ef68b68b7ccd8f48c0b';
+(node/*: any*/).hash = '9e5a5ccc708625dd40356d79ef1b9c8a';
 module.exports = node;

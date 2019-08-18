@@ -1,11 +1,13 @@
 const faker = require("faker");
 import { User } from "./base-types";
 
+import USERS from "./default-users";
+
 class Users {
   data: User[] = [];
 
   genId() {
-    const min = Math.ceil(0);
+    const min = Math.ceil(100000);
     const max = Math.floor(2147483646);
     return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
   }
@@ -45,7 +47,7 @@ class Users {
   }
 
   createUser(totemId: number): User {
-    const user: User = {
+    const user: User = USERS[totemId] || {
       id: this.genId(),
       totemId: totemId != null ? totemId : this.genTotemId(),
       name: faker.name.findName(),
@@ -53,7 +55,7 @@ class Users {
       avatarUrl: faker.internet.avatar()
     };
 
-    console.log("ADDING NEW USER: " + user.id);
+    console.log("ADDING NEW USER: " + user.id + " TOTEM: " + totemId);
     this.data.push(user);
     return user;
   }

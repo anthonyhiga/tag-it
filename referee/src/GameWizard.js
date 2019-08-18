@@ -115,6 +115,9 @@ subscription GameWizardGameCheckListQuery {
     ltTagTeamId
     type
     status
+    name
+    avatarUrl
+    iconUrl
   }
 }
 `;
@@ -144,6 +147,15 @@ query GameWizardGameScoreQuery($id: ID!) {
     totemId
     avatarUrl
     iconUrl
+  }
+  game_settings(id: $id) {
+    countDownSec
+    gameLengthInMin
+    health
+    reloads
+    shields
+    megatags
+    totalTeams
   }
 }
 `;
@@ -178,6 +190,8 @@ requestSubscription(
   }
 );
 
+const avatarWidth = 30;
+
 const useStyles = makeStyles(theme => ({
   root: {
     width: '90%',
@@ -196,6 +210,30 @@ const useStyles = makeStyles(theme => ({
   },
   container: {
     flex: 1,
+  },
+  avatar: {
+    width: avatarWidth,
+    height: avatarWidth,
+  },
+  soloavatar: {
+    backgroundColor: 'orange',
+    width: avatarWidth,
+    height: avatarWidth,
+  },
+  team1avatar: {
+    backgroundColor: 'red',
+    width: avatarWidth,
+    height: avatarWidth,
+  },
+  team2avatar: {
+    backgroundColor: 'blue',
+    width: avatarWidth,
+    height: avatarWidth,
+  },
+  team3avatar: {
+    backgroundColor: 'yellow',
+    width: avatarWidth,
+    height: avatarWidth,
   },
 }));
 
@@ -505,21 +543,84 @@ const GameScoring = (props) => {
       }
       let count = 0;
       let total = 0;
+
       props.report_check_list.forEach(item => {
         if (item.status === "COMPLETE") {
           count++;
         }
         total++;
       });
-
       return <>
         <LinearProgress variant="determinate" value={100 * count/total}/>
-        {total - count} out of {total} left
+        Waiting on {total - count} out of {total} reports - Please bring your Gun to the Sensor
+        <Table size="small">
+        <TableHead>
+        <TableRow>
+        <TableCell></TableCell>
+        <TableCell>Name</TableCell>
+        <TableCell>Team</TableCell>
+        <TableCell>Type</TableCell>
+        <TableCell>Status</TableCell>
+        </TableRow>
+        </TableHead>
+        <TableBody>
+            {props.report_check_list.filter((a, b) => { 
+              return a.status !== "COMPLETE"
+            }).map(item => {
+          return (<TableRow>
+          <TableCell>
+            <Avatar src={item.avatarUrl}/>
+          </TableCell> 
+          <TableCell>
+            {item.name}
+          </TableCell> 
+          <TableCell>
+            {item.ltTeamId}
+          </TableCell> 
+          <TableCell>
+            {item.type}
+          </TableCell> 
+          <TableCell>
+            {item.status}
+          </TableCell> 
+          </TableRow>)
+        })}
+        </TableBody>
+        </Table>
         </>;
     }}
     />
   )
 }
+
+const GameScoreTable = ({gameScore, playerMap, teamId, isAlive}) => { 
+  return <Table size="small">
+        <TableHead>
+        <TableRow>
+        <TableCell>Icon</TableCell>
+        <TableCell>Name</TableCell>
+        <TableCell>Scored</TableCell>
+        <TableCell>Received</TableCell>
+        <TableCell>Survived</TableCell>
+        </TableRow>
+        </TableHead>
+        <TableBody>
+        {gameScore.map(item => {return item.ltTeamId == teamId ?
+          <TableRow>
+          <TableCell>
+            <Avatar src={playerMap[item.playerId] && playerMap[item.playerId].avatarUrl}/>
+          </TableCell> 
+          <TableCell>
+            {playerMap[item.playerId] && playerMap[item.playerId].name}
+          </TableCell> 
+          <TableCell>{item.totalTagsGiven}</TableCell>
+          <TableCell>{item.totalTagsReceived}</TableCell>
+          <TableCell>{item.survivedTimeSec} (s)</TableCell>
+          </TableRow> : null;
+        })}
+        </TableBody>
+        </Table>
+} 
 
 const GameScoreBoard = (props) => {
   const game = props.game;
@@ -531,6 +632,23 @@ const GameScoreBoard = (props) => {
     query={gameScoreQuery}
     variables = {{id: game.id}}
     render={({error, props}) => {
+      const avatarMap = (ltTeamId) => {
+        let avatarType = classes.avatar;
+        if (ltTeamId == 0) {
+           avatarType = classes.soloavatar;
+        }
+        if (ltTeamId == 1) {
+          avatarType = classes.team1avatar;
+        }
+        if (ltTeamId == 2) {
+          avatarType = classes.team2avatar;
+        }
+        if (ltTeamId == 3) {
+          avatarType = classes.team3avatar;
+        }
+        return avatarType;
+      };
+
       if (error) {
         return <div>Unable to Load</div>;
       }
@@ -543,34 +661,58 @@ const GameScoreBoard = (props) => {
           playerMap[item.id] = item;
         }
       });
+      const isAlive = (timeLived) => {
+        return props.game_settings.gameLengthInMin * 60 <= timeLived;
+      }
+
       const gameScore = [...props.game_score];
-      return <><Table size="small">
-        <TableHead>
-        <TableRow>
-        <TableCell>ID</TableCell>
-        <TableCell>Name</TableCell>
-        <TableCell>Team ID</TableCell>
-        <TableCell>Player ID</TableCell>
-        <TableCell>Hits Scored</TableCell>
-        <TableCell>Hits Received</TableCell>
-        <TableCell>Survival Time</TableCell>
-        </TableRow>
-        </TableHead>
-        <TableBody>
-        {gameScore.map(item => (
-          <TableRow>
-          <TableCell>{item.playerId}</TableCell>
-          <TableCell>{playerMap[item.playerId] && playerMap[item.playerId].name}</TableCell>
-          <TableCell>{item.ltTeamId}</TableCell>
-          <TableCell>{item.ltPlayerId}</TableCell>
-          <TableCell>{item.totalTagsGiven}</TableCell>
-          <TableCell>{item.totalTagsReceived}</TableCell>
-          <TableCell>{item.survivedTimeSec} seconds</TableCell>
-          </TableRow>
+      gameScore.sort((a, b) => {
+        return b.totalTagsGiven - a.totalTagsGiven || 
+        a.totalTagsReceived - b.totalTagsReceived; 
+      });
+
+      const teamSummary = [];
+      for (let i = 0; i <= 3; i++) {
+        let score = 0;
+        let players = 0;
+        gameScore.forEach(item => {
+          if (item.ltTeamId != i) {
+            return;
+          }
+          score += item.totalTagsGiven;
+          players++;
+        });
+        if (players > 0) {
+          teamSummary.push({
+            teamId: i,
+            score,
+            players,
+          });
+        }
+      }
+
+      return <Grid container spacing={3} justify="space-around">
+        {teamSummary.map((summary) => (
+          <Grid item xs>
+          <Grid container>
+          <Grid item xs>
+          <Avatar aria-label="Recipe" className={avatarMap(summary.teamId)}>
+            {summary.teamId} 
+          </Avatar>
+          </Grid>
+          <Grid item xs>
+          Team {summary.teamId} Score: {summary.score}
+          </Grid>
+          </Grid>
+          <GameScoreTable 
+            teamId={summary.teamId}
+            gameScore={gameScore}
+            playerMap={playerMap}
+            isAlive={isAlive}
+            />
+          </Grid>
         ))}
-        </TableBody>
-        </Table>
-        </>;
+      </Grid>
     }}
     />
     <AppBar position="fixed" color="primary" style={{

@@ -1,6 +1,6 @@
 /**
  * @flow
- * @relayHash 9782510b6b50bc21ccdc8bc823c60541
+ * @relayHash b4e8abd4e26ff4c029a4a79be8a3301b
  */
 
 /* eslint-disable */
@@ -20,6 +20,9 @@ export type GameWizardGameCheckListQueryResponse = {|
     +ltTagTeamId: ?string,
     +type: ReportType,
     +status: ReportStatusType,
+    +name: ?string,
+    +avatarUrl: ?string,
+    +iconUrl: ?string,
   |}>
 |};
 export type GameWizardGameCheckListQuery = {|
@@ -38,6 +41,9 @@ subscription GameWizardGameCheckListQuery {
     ltTagTeamId
     type
     status
+    name
+    avatarUrl
+    iconUrl
   }
 }
 */
@@ -94,6 +100,27 @@ var v0 = [
         "name": "status",
         "args": null,
         "storageKey": null
+      },
+      {
+        "kind": "ScalarField",
+        "alias": null,
+        "name": "name",
+        "args": null,
+        "storageKey": null
+      },
+      {
+        "kind": "ScalarField",
+        "alias": null,
+        "name": "avatarUrl",
+        "args": null,
+        "storageKey": null
+      },
+      {
+        "kind": "ScalarField",
+        "alias": null,
+        "name": "iconUrl",
+        "args": null,
+        "storageKey": null
       }
     ]
   }
@@ -118,11 +145,11 @@ return {
     "operationKind": "subscription",
     "name": "GameWizardGameCheckListQuery",
     "id": null,
-    "text": "subscription GameWizardGameCheckListQuery {\n  report_check_list {\n    gameId\n    ltTeamId\n    ltPlayerId\n    ltTagTeamId\n    type\n    status\n  }\n}\n",
+    "text": "subscription GameWizardGameCheckListQuery {\n  report_check_list {\n    gameId\n    ltTeamId\n    ltPlayerId\n    ltTagTeamId\n    type\n    status\n    name\n    avatarUrl\n    iconUrl\n  }\n}\n",
     "metadata": {}
   }
 };
 })();
 // prettier-ignore
-(node/*: any*/).hash = 'ff74aeb04376f77329334f2f43c10e9e';
+(node/*: any*/).hash = '41aaf20a3a9f69c62d8dad4050056a64';
 module.exports = node;

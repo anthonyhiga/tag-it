@@ -15,6 +15,7 @@ export interface Player {
   id: number;
   userId: number;
   gameId: number;
+  ltGameId: number | null;
   ltTeamId: number | null;
   ltPlayerId: number | null;
   status: string;
@@ -74,13 +75,13 @@ export interface GameSettings {
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
   assignment: {
-    requestToAssign: false,
-    requireTotem: false,
+    requestToAssign: true,
+    requireTotem: true,
     requireHolsterOnly: true,
     registeredTotemsOnly: false,
     channel: {}
   },
-  reportTimeLimitSec: 120,
+  reportTimeLimitSec: 12000,
   reportDelaySec: 1,
   countDownSec: 30,
   gameLengthInMin: 5, // five minute game

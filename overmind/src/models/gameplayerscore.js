@@ -16,6 +16,9 @@ module.exports = (sequelize, DataTypes) => {
     ltGameId: DataTypes.INTEGER,
     ltTeamId: DataTypes.INTEGER,
     ltPlayerId: DataTypes.INTEGER,
+    name: DataTypes.STRING, 
+    avatarUrl: DataTypes.STRING, 
+    iconUrl: DataTypes.STRING,
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE
   }, {});

@@ -23,6 +23,7 @@ import {
 } from "./base-types";
 import arbiters from "./arbiters";
 import players from "./players";
+import users from "./users";
 import StateMachine from "./state-machine";
 
 const { Game, GamePlayerScore } = require("./models");
@@ -176,6 +177,12 @@ export class GameManager {
       this.scoringTimer = null;
     }
 
+    const currentPlayers = {};
+    const currentPlayerList = players.getGamePlayers();
+    currentPlayerList.forEach(player => {
+      currentPlayers[player.id] = player;
+    });
+
     const ltTagsGiven = {};
 
     // For now we'll skip doing ultra detailed who shot who reports
@@ -188,27 +195,26 @@ export class GameManager {
           ltTagsGiven[id] = 0;
         }
         ltTagsGiven[id] += tags;
+        console.log(id + ":" + tags);
       });
     }
 
     let gameId: number | null = null;
     const finalScore: any[] = [];
     const created = [];
-    const playersCache = players.getActivePlayers();
     for (const key in this.reportBasicScoreCache) {
       const value = this.reportBasicScoreCache[key];
       const id = value.ltTeamId + ":" + value.ltPlayerId;
       gameId = value.gameId;
       let playerId = null;
-      for (const playerIndex in playersCache) {
-        const player = playersCache[playerIndex];
+      currentPlayerList.forEach(player => {
         if (
           player.ltTeamId == value.ltTeamId &&
           player.ltPlayerId == value.ltPlayerId
         ) {
           playerId = player.id;
         }
-      }
+      });
 
       const score = {
         gameId: value.gameId,
@@ -284,14 +290,21 @@ export class GameManager {
 
     reportItems.forEach((item: any) => {
       const key = this.reportItemKey(item);
+      const {gameId, ltGameId, ltTeamId, ltPlayerId } = item;
+      const player = players.getPlayerByTeamPlayerId(ltGameId, ltTeamId, ltPlayerId); 
+      const user = player && users.get(player.userId);
+
       this.reportCheckListCache[key] = {
-        gameId: item.gameId,
-        ltGameId: item.ltGameId,
-        ltTeamId: item.ltTeamId,
-        ltPlayerId: item.ltPlayerId,
+        gameId: gameId,
+        ltGameId: ltGameId,
+        ltTeamId: ltTeamId,
+        ltPlayerId: ltPlayerId,
         ltTagTeamId: null,
         type: "BASIC",
-        status: "PENDING"
+        status: "PENDING",
+        name: user && user.name, 
+        avatarUrl: user && user.avatarUrl, 
+        iconUrl: user && user.iconUrl, 
       };
     });
 
@@ -445,14 +458,21 @@ export class GameManager {
         });
         if (this.reportCheckListCache[followUpKey] == null) {
           console.warn("ADDING FOLLOW UP: " + followUpKey);
+          const {gameId, ltGameId, ltTeamId, ltPlayerId} = args.report;
+          const player = players.getPlayerByTeamPlayerId(ltGameId, ltTeamId, ltPlayerId); 
+          const user = player && users.get(player.userId);
+
           this.reportCheckListCache[followUpKey] = {
-            gameId: args.report.gameId,
-            ltGameId: args.report.ltGameId,
-            ltTeamId: args.report.ltTeamId,
-            ltPlayerId: args.report.ltPlayerId,
+            gameId,
+            ltGameId,
+            ltTeamId,
+            ltPlayerId,
             ltTagTeamId: followUp,
             type: "TEAM",
-            status: "PENDING"
+            status: "PENDING",
+            name: user && user.name, 
+            avatarUrl: user && user.avatarUrl, 
+            iconUrl: user && user.iconUrl, 
           };
         }
       });
@@ -483,14 +503,20 @@ export class GameManager {
       item.status = "COMPLETE";
     } else {
       console.warn("RECEIVED EARLY REPORT: " + key);
+      const {gameId, ltGameId, ltTeamId, ltPlayerId, ltTagTeamId} = args.report;
+      const player = players.getPlayerByTeamPlayerId(ltGameId, ltTeamId, ltPlayerId); 
+      const user = player && users.get(player.userId); 
       this.reportCheckListCache[key] = {
-        gameId: args.report.gameId,
-        ltGameId: args.report.ltGameId,
-        ltTeamId: args.report.ltTeamId,
-        ltPlayerId: args.report.ltPlayerId,
-        ltTagTeamId: args.report.ltTagTeamId,
+        gameId,
+        ltGameId,
+        ltTeamId,
+        ltPlayerId,
+        ltTagTeamId,
         type: "TEAM",
-        status: "COMPLETE"
+        status: "COMPLETE", 
+        name: user && user.name, 
+        avatarUrl: user && user.avatarUrl, 
+        iconUrl: user && user.iconUrl, 
       };
     }
 
@@ -537,7 +563,7 @@ export class GameManager {
         games_list: async () => await Game.findAll(),
         game_players_list: async () => {
           // For now we'll return the active cache
-          return players.getActivePlayers();
+          return players.getGamePlayers();
         },
         active_games_list: async () =>
           await Game.findAll({

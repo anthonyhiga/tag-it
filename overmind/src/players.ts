@@ -96,11 +96,27 @@ class Players {
     );
   }
 
+  getPlayerByTeamPlayerId(
+    ltGameId: number,
+    ltTeamId: number,
+    ltPlayerId: number
+  ): Player | null {
+    return (
+      Object.values(this.data).find(
+        player =>
+          player.ltPlayerId == ltPlayerId &&
+          player.ltTeamId == ltTeamId &&
+          player.ltGameId == ltGameId
+      ) || null
+    );
+  }
+
   createPlayer(gameId: number, userId: number): Player {
     const player = {
       id: this.genId(),
       userId,
       gameId,
+      ltGameId: null,
       ltTeamId: null,
       ltPlayerId: null,
       status: "IDLE"

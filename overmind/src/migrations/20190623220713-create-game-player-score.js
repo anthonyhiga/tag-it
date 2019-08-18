@@ -38,6 +38,15 @@ module.exports = {
       ltPlayerId: {
         type: Sequelize.INTEGER
       },
+      name: {
+        type: Sequelize.STRING
+      },
+      avatarUrl: {
+        type: Sequelize.STRING
+      },
+      iconUrl: {
+        type: Sequelize.STRING
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE

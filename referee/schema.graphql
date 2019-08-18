@@ -172,6 +172,9 @@ type ReportCheckListItem {
   ltTagTeamId: ID
   type: ReportType!
   status: ReportStatusType!
+  name: String
+  avatarUrl: String
+  iconUrl: String
 }
 
 enum ReportStatusType {

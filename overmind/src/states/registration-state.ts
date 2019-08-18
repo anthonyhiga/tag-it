@@ -89,6 +89,7 @@ export class RegistrationState extends BaseState<{
       return false;
     }
 
+    player.ltGameId = this.props.game.ltId;
     player.ltPlayerId = players.length;
     player.ltTeamId = team.id;
 
