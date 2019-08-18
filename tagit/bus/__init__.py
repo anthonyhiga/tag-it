@@ -16,7 +16,6 @@ from gpiozero import Button
 
 GLOBAL_PI = pi()
 GLOBAL_PI.wave_clear()
-GLOBAL_PI.stop()
 
 #
 # Constants
@@ -160,7 +159,7 @@ class MessageInputStream(object):
         self.stream = []
         self.reader = None
         self.timer = None
-        self.pi = pi()
+        self.pi = GLOBAL_PI
         self.q = Queue() 
         self.silence = False
         self.messageParserLock = Lock()
@@ -175,8 +174,7 @@ class MessageInputStream(object):
         self.t.start()
 
     def setSilent(self, value):
-        #self.silence = value
-        None
+        self.silence = value
 
     def start(self):
         #if (self.reader == None):
@@ -747,8 +745,8 @@ class MessageOutputStream(object):
         self.id = id
 
         self.isBusy = isBusy
+        self.pi = GLOBAL_PI
         self.q = Queue() 
-        self.pi = pi()
         self.buildWaveForms()
 
         self.t = Thread(target = self.worker)
@@ -759,7 +757,6 @@ class MessageOutputStream(object):
         return self.pi.wave_create()
 
     def buildWaveForms(self):
-        #self.pi.wave_clear();
         self.rise = {
                 1000: self.defineWave(self.carrier38khz(1000)),
                 2000: self.defineWave(self.carrier38khz(2000)),

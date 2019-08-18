@@ -63,7 +63,7 @@ def decodeTagReport(message):
     tags = [0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(0, 8):
         if (validPlayers & (1 << i) > 0):
-            tags[i] = message[index] 
+            tags[i] = BCDtoD(message[index])
             index = index + 1
         else:
             tags[i] = 0

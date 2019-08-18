@@ -10,7 +10,7 @@ class RFID(object):
         self.onId = onId
         self.lastId = 0
 
-        id = int(monotonic() * 1000)
+        id = self.reader.read_id_no_block()
         print("SETTING ID: " + str(id))
         self.onId(id)
 
@@ -23,8 +23,7 @@ class RFID(object):
                 if id != self.lastId:
                     print("UPDATING ID: " + str(id))
                     self.lastId = id
-                    self.onId(int(monotonic() * 1000))
-                    # self.onId(id)
+                    self.onId(id)
 
                 sleep(0.25)
 
