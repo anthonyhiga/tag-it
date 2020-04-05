@@ -79,7 +79,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
     requireTotem: true,
     requireHolsterOnly: true,
     registeredTotemsOnly: false,
-    channel: {}
+    channel: {},
   },
   reportTimeLimitSec: 12000,
   reportDelaySec: 1,
@@ -91,7 +91,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   megatags: 0,
   totalTeams: 1,
   gameType: "CUSTOM",
-  options: []
+  options: [],
 };
 
 export type GameState =
@@ -133,7 +133,7 @@ export const DEFAULT_SM_MODEL: SMModel = {
   onChannelUpdated: DEFAULT_HANDLER("onChannelUpdated"),
   onPlayerJoined: DEFAULT_HANDLER("onPlayerJoined"),
   onGameStart: DEFAULT_HANDLER("onGameStart"),
-  onFinalScore: DEFAULT_HANDLER("onFinalScore")
+  onFinalScore: DEFAULT_HANDLER("onFinalScore"),
 };
 
 export interface GameMachineBuilder<SM> {

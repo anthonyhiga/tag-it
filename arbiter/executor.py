@@ -324,7 +324,11 @@ class Executor(object):
         self.log("PLAYER - SEARCHING FOR NEW PLAYER")
         id = monotonic()
         self.addPlayerID = id 
-        while(self.addPlayerState != AddPlayerState.COMPLETE and self.addPlayerID == id):
+        while(self.addPlayerState != AddPlayerState.COMPLETE):
+            if (self.addPlayerID != id):
+                self.log('PLAYER - SEARCH REPLACED')
+                break
+
             if (self.addPlayerState == AddPlayerState.ADVERTISE):
                 self.outputStream.send(self.addPlayerMessage)
                 sleep(1.5)

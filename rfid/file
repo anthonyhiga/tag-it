@@ -1,16 +1,15 @@
+from . import MFRC522
 import RPi.GPIO as GPIO
-from mfrc522 import MFRC522
-from threading import Thread 
-from time import sleep, monotonic
+  
+class SimpleMFRC522:
 
-class DeviceMFRC522:
   READER = None
   
   KEY = [0xFF,0xFF,0xFF,0xFF,0xFF,0xFF]
   BLOCK_ADDRS = [8, 9, 10]
   
-  def __init__(self, id):
-    self.READER = MFRC522(device=id)
+  def __init__(self):
+    self.READER = MFRC522()
   
   def read(self):
       id, text = self.read_no_block()
@@ -87,36 +86,3 @@ class DeviceMFRC522:
       for i in range(0, 5):
           n = n * 256 + uid[i]
       return n
-
-class RFID(object):
-    def __init__(self, id, onId):
-        print("BOOTING - RFID")
-        self.reader = DeviceMFRC522(id)
-        self.onId = onId
-        self.lastId = 0
-
-        id = self.reader.read_id_no_block()
-        print("SETTING ID: " + str(id))
-        self.onId(id)
-
-        self.start()
-
-    def loop(self):
-        try:
-            while True:
-                id = self.reader.read_id()
-                if id != self.lastId:
-                    print("UPDATING ID: " + str(id))
-                    self.lastId = id
-                    self.onId(id)
-
-                sleep(0.25)
-
-        finally:
-            GPIO.cleanup()
-
-
-    def start(self):
-        self.t = Thread(target = self.loop)
-        self.t.start()
-
