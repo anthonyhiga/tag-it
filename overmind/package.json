@@ -4,12 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "prestart" : "npm run build",
+    "prestart": "npm run build",
     "start": "cd build/dist && node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db": "sh db.sh",
     "schema": "apollo-codegen generate **/*.graphql --target typescript --output operation-result-types.ts",
-    "build": "ncp src/schema build/dist/schema &&  tsc -b",
+    "build": "mkdir -p build/dist/schema && ncp src/schema build/dist/schema &&  tsc -b",
     "watch": "ncp src/schema build/dist/schema &&  tsc -p . --watch"
   },
   "keywords": [],
@@ -40,6 +40,6 @@
     "awesome-typescript-loader": "^5.2.1",
     "ncp": "^2.0.0",
     "source-map-loader": "^0.2.4",
-    "typescript": "^3.5.3"
+    "typescript": "^3.9.10"
   }
 }

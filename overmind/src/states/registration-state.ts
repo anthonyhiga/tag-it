@@ -210,7 +210,6 @@ export class RegistrationState extends BaseState<{
       channel: channel.name,
       type: "ADD_PLAYER",
       id: player.id,
-      gameType: this.props.settings.gameType,
       gameId: this.props.game.ltId,
       teamId: player.ltTeamId,
       playerId: player.ltPlayerId,
