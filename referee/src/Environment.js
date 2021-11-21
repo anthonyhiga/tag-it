@@ -2,7 +2,8 @@ import { Environment, Network, RecordSource, Store } from "relay-runtime";
 
 import { SubscriptionClient } from "subscriptions-transport-ws";
 
-const HOST_NAME = "192.168.10.165:4000";
+//const HOST_NAME = "192.168.10.241:4000";
+const HOST_NAME = "localhost:4000";
 const GRAPHQL_ENDPOINT = `${HOST_NAME}/graphql`;
 
 const fetchQuery = (operation, variables) => {

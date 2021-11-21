@@ -42,6 +42,8 @@ import GameStartRegistrationButton from "./GameStartRegistrationButton";
 import GameStartButton from "./GameStartButton";
 import GameEndButton from "./GameEndButton";
 
+import GameWizardScoreBoards from "./wizard/GameWizardScoreBoard";
+
 import Fade from "@material-ui/core/Fade";
 import Slide from "@material-ui/core/Slide";
 
