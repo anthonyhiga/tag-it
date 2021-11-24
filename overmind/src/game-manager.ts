@@ -55,7 +55,10 @@ export class GameManager {
     players.setHandler("graphql:active_players_list", () => {
       console.warn("UPDATING ACTIVE PLAYER LIST");
       this.pubsub.publish(PLAYERS_UPDATED, {
-        active_players_list: players.getGamePlayers()
+        active_players_list: {
+          id: 88888888,
+          items: players.getGamePlayers()
+        }
       });
     });
   }
@@ -158,7 +161,10 @@ export class GameManager {
           console.log("GAME STATE ID: " + id + " STATUS: " + status);
           this.pubsub.publish(GAMES_UPDATED, {
             games_list: results[0],
-            active_games_list: results[1]
+            active_games_list: {
+              id: 99999999,
+              items: results[1]
+	    }
           });
         });
       });
@@ -332,10 +338,16 @@ export class GameManager {
     ]).then(results => {
       this.pubsub.publish(GAMES_UPDATED, {
         games_list: results[0],
-        active_games_list: results[1]
+        active_games_list: {
+          id: 99999999,
+          items: results[1]
+	}
       });
       this.pubsub.publish(PLAYERS_UPDATED, {
-        active_players_list: players.getGamePlayers()
+        active_players_list: {
+          id: 88888888,
+          items: players.getGamePlayers()
+        }
       });
       this.pubsub.publish(SETTINGS_UPDATED, {
         game_settings: this.gameSettings
@@ -382,7 +394,10 @@ export class GameManager {
     ]).then(results => {
       this.pubsub.publish(GAMES_UPDATED, {
         games_list: results[0],
-        active_games_list: results[1]
+        active_games_list: {
+          id: 99999999,
+          items: results[1]
+	}
       });
     });
 
@@ -403,7 +418,7 @@ export class GameManager {
     this.pubsub.publish(SETTINGS_UPDATED, {
       game_settings: this.gameSettings
     });
-    return await Game.findByPk(args.id);
+    return this.gameSettings;
   };
 
   startGameMutation = async (root: any, args: any) => {
@@ -416,12 +431,25 @@ export class GameManager {
     return await Game.findByPk(args.id);
   };
 
+  cancelGameMutation = async (root: any, args: any) => {
+    // This is coming from a client
+    if (this.gameMachineCache[args.id]) {
+      delete this.gameMachineCache[args.id];
+      console.log("CLEARING GAME MACHINE");
+      console.log("CANCEL GAME: " + args.id);
+    } else {
+      console.warn("CANNOT CANCEL GAME: " + args.id);
+    }
+    return await Game.findByPk(args.id);
+  };
+
   endGameMutation = async (root: any, args: any) => {
     // This is coming from a client
     if (this.gameMachineCache[args.id]) {
       this.gameMachineCache[args.id].model().onGameEnd();
       delete this.gameMachineCache[args.id];
       console.log("CLEARING GAME MACHINE");
+      console.log("END GAME: " + args.id);
     } else {
       console.warn("CANNOT END GAME: " + args.id);
     }
@@ -563,16 +591,33 @@ export class GameManager {
         games_list: async () => await Game.findAll(),
         game_players_list: async () => {
           // For now we'll return the active cache
-          return players.getGamePlayers();
+          const items = await players.getGamePlayers();
+	  return {
+            id: 88888887,
+            items
+	  };
         },
-        active_games_list: async () =>
-          await Game.findAll({
+        active_players_list: async () => {
+          const items = await players.getGamePlayers();
+	  return {
+            id: 88888888,
+            items
+	  };
+        },
+        active_games_list: async () => {
+          const items = await Game.findAll({
             where: {
               status: {
                 [Op.ne]: "COMPLETE"
               }
             }
-          }),
+          });
+
+          return {
+            id: 99999999,
+            items
+          };
+	},
         game: async (root: any, args: any) => await Game.findByPk(args.id)
       },
 
@@ -583,6 +628,7 @@ export class GameManager {
         update_game_settings: this.updateGameSettingsMutation,
         start_game: this.startGameMutation,
         end_game: this.endGameMutation,
+        cancel_game: this.cancelGameMutation,
         start_registration: this.startRegistrationMutation,
         joined_player: this.joinedPlayerMutation
       },

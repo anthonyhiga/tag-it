@@ -48,9 +48,14 @@ export class RunningState extends BaseState<{
     });
   }
 
+  onGameEnd = () => {
+    manager.updateGameState(this.props.game.id, "COMPLETE");
+  };
+
   model() {
     return {
-      ...DEFAULT_SM_MODEL
+      ...DEFAULT_SM_MODEL,
+      onGameEnd: this.onGameEnd
     };
   }
 }

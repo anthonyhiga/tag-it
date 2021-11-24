@@ -33,12 +33,22 @@ export interface GamePlayer {
   avatarUrl: string;
 }
 
+export interface GamePlayerList {
+  id: number;
+  items: Array<GamePlayer>; 
+}
+
 export interface User {
   id: number;
   totemId: number;
   name: string;
   iconUrl: string;
   avatarUrl: string;
+}
+
+export interface GameList {
+  id: number;
+  items: Array<Game>; 
 }
 
 export interface Game {
@@ -51,6 +61,7 @@ export interface Game {
 }
 
 export interface GameSettings {
+  id: number;
   assignment?: {
     requestToAssign: boolean;
     requireTotem: boolean;
@@ -74,6 +85,7 @@ export interface GameSettings {
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
+  id: 0,
   assignment: {
     requestToAssign: true,
     requireTotem: true,
