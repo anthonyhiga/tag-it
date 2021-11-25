@@ -1,16 +1,21 @@
-import { Environment, Network, RecordSource, Store } from "relay-runtime";
+import {
+  Environment,
+  Network,
+  RecordSource,
+  Store,
+  Observable,
+} from "relay-runtime";
 
 import { SubscriptionClient } from "subscriptions-transport-ws";
 
-//const HOST_NAME = "192.168.10.241:4000";
 const HOST_NAME = "localhost:4000";
 const GRAPHQL_ENDPOINT = `${HOST_NAME}/graphql`;
 
 const fetchQuery = (operation, variables) => {
-  return fetch(GRAPHQL_ENDPOINT, {
+  return fetch("http://" + GRAPHQL_ENDPOINT, {
     method: "POST",
     headers: {
-      Accept: "application/json",
+      "Accept": "application/json",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -22,21 +27,23 @@ const fetchQuery = (operation, variables) => {
   });
 };
 
-const setupSubscription = (config, variables, cacheConfig, observer) => {
-  const query = config.text;
-  const subscriptionClient = new SubscriptionClient(GRAPHQL_ENDPOINT, {
-    reconnect: true,
+const subscriptionClient = new SubscriptionClient("ws://" + GRAPHQL_ENDPOINT, {
+  reconnect: true,
+});
+
+const subscribe = (request, variables) => {
+  const subscribeObservable = subscriptionClient.request({
+    query: request.text,
+    operationName: request.name,
+    variables,
   });
 
-  console.log(subscriptionClient);
-
-  subscriptionClient.subscribe({ query, variables }, (error, result) => {
-    observer.onNext({ data: result });
-  });
+  // Important: Convert subscriptions-transport-ws observable type to Relay's
+  return Observable.from(subscribeObservable);
 };
 
 const environment = new Environment({
-  network: Network.create(fetchQuery, setupSubscription),
+  network: Network.create(fetchQuery, subscribe),
   store: new Store(new RecordSource()),
 });
 

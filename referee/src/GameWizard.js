@@ -478,7 +478,7 @@ const GameRegistration = (props) => {
           }
           const players = [...props.active_players_list];
           players.sort(
-            (a, b) => a.ltTeamId - b.ltTeamId || a.ltPlayerId - b.ltPlayerId
+            (a, b) => a.ltTeamId - b.ltTeamId || a.ltPlayerId - b.ltPlayerId,
           );
           return (
             <Transition>

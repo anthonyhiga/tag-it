@@ -46,7 +46,7 @@ enum ArbiterZoneMode {
   CONTESTED_ZONE
 }
 
-input BasicTagReport {
+input BasicTagReportInput {
   gameId: ID!
   ltGameId: ID!
   ltTeamId: ID!
@@ -55,17 +55,6 @@ input BasicTagReport {
   survivedTimeSec: Int!
   tagsReceived: Int!
   followUpReports: [ID]
-}
-
-type CurrentGameSettings {
-  countDownSec: Int
-  gameLengthInMin: Int
-  health: Int
-  reloads: Int
-  shields: Int
-  megatags: Int
-  totalTeams: Int
-  options: [String]
 }
 
 type Game {
@@ -77,6 +66,11 @@ type Game {
   startedAt: String
 }
 
+type GameList {
+  id: ID!
+  items: [Game]
+}
+
 type GamePlayer {
   id: ID!
   status: PlayerStatus!
@@ -86,6 +80,11 @@ type GamePlayer {
   totemId: ID!
   avatarUrl: String!
   iconUrl: String!
+}
+
+type GamePlayerList {
+  id: ID!
+  items: [GamePlayer]
 }
 
 type GamePlayerScore {
@@ -102,7 +101,19 @@ type GamePlayerScore {
   ltPlayerId: ID!
 }
 
-input GameSettings {
+type GameSettings {
+  id: ID!
+  countDownSec: Int
+  gameLengthInMin: Int
+  health: Int
+  reloads: Int
+  shields: Int
+  megatags: Int
+  totalTeams: Int
+  options: [String]
+}
+
+input GameSettingsInput {
   countDownSec: Int
   gameLengthInMin: Int
   health: Int
@@ -135,12 +146,13 @@ type Mutation {
   update_arbiter_settings(settings: UpdateArbiterSettings): ArbiterSettings
   send_arbiter_command(arbiterId: ID!, message: String!): ArbiterCommand
   respond_arbiter_command(id: ID!, response: String, status: ArbiterCommandStatus!): ArbiterCommand
-  file_basic_tag_report(report: BasicTagReport!): Game
-  file_team_tag_report(report: TeamTagReport!): Game
+  file_basic_tag_report(report: BasicTagReportInput!): Game
+  file_team_tag_report(report: TeamTagReportInput!): Game
   joined_player(id: ID!, totemId: ID): GamePlayer!
   create_game(type: String!, name: String): Game
   end_game(id: ID!): Game
-  update_game_settings(id: ID!, settings: GameSettings!): Game
+  cancel_game(id: ID!): Game
+  update_game_settings(id: ID!, settings: GameSettingsInput!): GameSettings
   start_game(id: ID!): Game
   start_registration(id: ID!): Game
 }
@@ -157,11 +169,12 @@ type Query {
   arbiter_active_commands(id: ID!): [ArbiterCommand]
   game_types_list: [GameType]
   game_score(id: ID!): [GamePlayerScore]
-  games_list: [Game]
+  games_list: GameList
   game(id: ID!): Game
-  active_games_list: [Game]
-  game_settings(id: ID!): CurrentGameSettings
-  game_players_list(id: ID!): [GamePlayer]
+  active_games_list: GameList
+  game_settings(id: ID!): GameSettings
+  game_players_list(id: ID!): GamePlayerList
+  active_players_list: GamePlayerList
 }
 
 type ReportCheckListItem {
@@ -190,15 +203,15 @@ enum ReportType {
 type Subscription {
   arbiter_settings_updated(id: ID!): ArbiterSettings
   arbiter_active_commands(id: ID!): [ArbiterCommand]
-  game_settings: CurrentGameSettings
+  game_settings: GameSettings
   game_score(id: ID!): [GamePlayerScore]
   report_check_list: [ReportCheckListItem]
-  games_list: [Game]
-  active_games_list: [Game]
-  active_players_list: [GamePlayer]
+  games_list: GameList
+  active_games_list: GameList
+  active_players_list: GamePlayerList
 }
 
-input TeamTagReport {
+input TeamTagReportInput {
   gameId: ID!
   ltGameId: ID!
   ltTeamId: ID!
