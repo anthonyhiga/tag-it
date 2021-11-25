@@ -51,6 +51,10 @@ export class RegistrationState extends BaseState<{
     this.props.onStartGame();
   };
 
+  onGameEnd = () => {
+    manager.updateGameState(this.props.game.id, "COMPLETE");
+  };
+
   findTeam(teams: GameTeam[], teamCount: number) {
     // use balance system.  Find team w/ least players and assign to that one
     let team = teams[1];
@@ -209,11 +213,11 @@ export class RegistrationState extends BaseState<{
     arbiters.sendArbiterCommand(channel.arbiterId, {
       channel: channel.name,
       type: "ADD_PLAYER",
-      id: player.id,
       gameId: this.props.game.ltId,
       teamId: player.ltTeamId,
       playerId: player.ltPlayerId,
-      ...this.props.settings
+      ...this.props.settings,
+      id: player.id,
     });
   }
 
@@ -227,7 +231,8 @@ export class RegistrationState extends BaseState<{
       ...DEFAULT_SM_MODEL,
       onChannelUpdated: this.onChannelUpdated,
       onPlayerJoined: this.onPlayerJoined,
-      onGameStart: this.onGameStart
+      onGameStart: this.onGameStart,
+      onGameEnd: this.onGameEnd
     };
   }
 }
