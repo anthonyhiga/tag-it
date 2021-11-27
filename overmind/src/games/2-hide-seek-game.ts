@@ -15,7 +15,7 @@ const builder: GameMachineBuilder<StateMachine<SMProps, SMModel>> = {
   type: "hide-seek-game",
   description:
     "2 Teams alternate between hiding and seeking every 1 minute. Starting team randomly chosen.",
-  name: "Hide And Seek",
+  name: "Hide and Seek",
   iconUrl: icon,
   build: (
     game: Game,

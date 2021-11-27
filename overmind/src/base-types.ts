@@ -19,6 +19,10 @@ export interface Player {
   ltTeamId: number | null;
   ltPlayerId: number | null;
   status: string;
+  health: number | null;
+  reloads: number | null;
+  shields: number | null;
+  megatags: number | null;
 }
 
 export interface GamePlayer {
@@ -31,6 +35,10 @@ export interface GamePlayer {
   name: string;
   iconUrl: string;
   avatarUrl: string;
+  health: number | null;
+  reloads: number | null;
+  shields: number | null;
+  megatags: number | null;
 }
 
 export interface GamePlayerList {
@@ -97,7 +105,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   reportDelaySec: 1,
   countDownSec: 15,
   gameLengthInMin: 1, // five minute game
-  health: 35,
+  health: 15,
   reloads: 99,
   shields: 99,
   megatags: 0,

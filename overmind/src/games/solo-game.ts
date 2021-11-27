@@ -14,7 +14,7 @@ import icon from "./solo-game-icon";
 const builder: GameMachineBuilder<StateMachine<SMProps, SMModel>> = {
   type: "solo-game",
   description: "Every Player for themselves.",
-  name: "Solo Game",
+  name: "Solo",
   iconUrl: icon,
   build: (
     game: Game,

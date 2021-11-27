@@ -109,6 +109,10 @@ type GamePlayer {
   totemId: ID!
   avatarUrl: String!
   iconUrl: String!
+  health: Int
+  reloads: Int
+  shields: Int
+  megatags: Int
 }
 
 type GamePlayerList {

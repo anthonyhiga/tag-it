@@ -18,7 +18,11 @@ function USER(
       totemId,
       name,
       iconUrl,
-      avatarUrl: avatarUrl || iconUrl
+      avatarUrl: avatarUrl || iconUrl,
+      health: null,
+      reloads: null,
+      shields: null,
+      megatags: null,
     }
   };
 }

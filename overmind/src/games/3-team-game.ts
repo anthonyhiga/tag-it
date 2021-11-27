@@ -15,7 +15,7 @@ const builder: GameMachineBuilder<StateMachine<SMProps, SMModel>> = {
   type: "3-team-game",
   description:
     "Players are separated into 3 teams.  Team members cannot shoot each other.",
-  name: "3 Team Game",
+  name: "3 Teams",
   iconUrl: icon,
   build: (
     game: Game,

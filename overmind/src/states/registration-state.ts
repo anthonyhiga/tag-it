@@ -66,6 +66,10 @@ export class RegistrationState extends BaseState<{
     return team;
   }
 
+  updatePlayer(player: Player, team: GameTeam, settings: GameSettings) {
+    // NO-OP
+  }
+
   updateTeamAssignment(channel: Channel, player: Player, teamCount: number) {
     // If a player already has a team assigned, we use that
     const teams = this.props.teams;
@@ -96,6 +100,9 @@ export class RegistrationState extends BaseState<{
     player.ltGameId = this.props.game.ltId;
     player.ltPlayerId = players.length;
     player.ltTeamId = team.id;
+
+    // Give any children a chance to intercept and modify the player
+    this.updatePlayer(player, team, this.props.settings);
 
     players.push(player);
     team.count++;
@@ -210,13 +217,28 @@ export class RegistrationState extends BaseState<{
         channel.name
     );
 
+    const mergedSettings = {...this.props.settings};
+    // Override with player specific stuff
+    if (player.health != null) {
+      mergedSettings['health'] = player.health;
+    }
+    if (player.reloads != null) {
+      mergedSettings['reloads'] = player.reloads;
+    }
+    if (player.shields != null) {
+      mergedSettings['shields'] = player.shields;
+    }
+    if (player.megatags != null) {
+      mergedSettings['megatags'] = player.megatags;
+    }
+
     arbiters.sendArbiterCommand(channel.arbiterId, {
       channel: channel.name,
       type: "ADD_PLAYER",
       gameId: this.props.game.ltId,
       teamId: player.ltTeamId,
       playerId: player.ltPlayerId,
-      ...this.props.settings,
+      ...mergedSettings,
       id: player.id,
     });
   }
