@@ -31,6 +31,7 @@ class Commands {
   }
 
   findActiveCommands(arbiterId: string) {
+    console.log("ARBITER ID: " + arbiterId);
     return this.data.filter(
       command =>
         (command.status === "START" || command.status === "RUNNING") &&

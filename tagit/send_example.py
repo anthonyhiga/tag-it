@@ -1,10 +1,16 @@
-from tagit import MessageOutputStream, MessageBuilder 
+import os, sys, traceback
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) 
+
+from tagit.bus import MessageOutputStream, MessageBuilder 
 from time import sleep
 
-stream = MessageOutputStream(3)
+def isBusy(busy):
+  print(busy)
+
+stream = MessageOutputStream(24, isBusy)
 
 while(True):
-    sleep(0.5);
+    sleep(5);
     message = MessageBuilder().beacon()\
                 .team(0)\
                 .zero()\

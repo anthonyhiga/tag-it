@@ -26,10 +26,10 @@ def markCommandComplete(id):
           }
         }
         """
-        ws.query(query, variables={'id': id})
+        result = ws.query(query, variables={'id': id})
 
     except:
-        print("ERROR: Unable talk to overmind")
+        print("ERROR: markCommandComplete - Unable talk to overmind")
         print("Unexpected error:", sys.exc_info()[0])
 
 def markCommandFailed(id):
@@ -46,7 +46,7 @@ def markCommandFailed(id):
         ws.query(query, variables={'id': id})
 
     except:
-        print("ERROR: Unable talk to overmind")
+        print("ERROR: markCommandFailed - Unable talk to overmind")
         print("Unexpected error:", sys.exc_info()[0])
 
 def markCommandRunning(id):
@@ -63,7 +63,7 @@ def markCommandRunning(id):
         ws.query(query, variables={'id': id})
 
     except:
-        print("ERROR: Unable talk to overmind")
+        print("ERROR: marCommandRunning - Unable talk to overmind")
         print("Unexpected error:", sys.exc_info()[0])
 
 
@@ -103,8 +103,10 @@ def subscribeCommands(runCommand, onReconnected):
 
 
     def monitor():
+      sleep(2)
+      print("Command - Connecting to Overmind")
       while(True):
-        print("Connecting to Overmind")
+        ws = None
         try:
           ws = getSocket()
           query = """
@@ -121,21 +123,29 @@ def subscribeCommands(runCommand, onReconnected):
             callback=callback)
 
           onReconnected()
-          print("Connected to Overmind")
+          print("Command - Connected to Overmind")
 
           # block this thread and do nothing unless the connection
           # is lost
           while(True):
-            if (not ws.is_running()):
-              print("Lost Connection to Overmind")
-              break
+            # we are reaching into the underlying implementation here.
+            # this is cause the graphql library doesn't have an api
+            # to see if it's died or not.
+            if not ws._connection.connected:
+              raise Exception("Command - Connection Lost");
             sleep(1)
 
         except:
-          print("ERROR: Unable to talk with overmind")
+          print("ERROR: Unable to talk with overmind, is it online?")
 
-        # retry every 20 seconds
-        sleep(10)
+        finally:
+          if ws != None:
+            ws.close()
+
+        # retry every 5 seconds
+        sleep(5)
+
+        print("Command - Re-connecting to Overmind")
 
     thread = Thread(target=monitor)
     thread.start()

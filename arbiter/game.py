@@ -20,13 +20,13 @@ def joinedPlayer(id, totemId):
     except:
         type, value, traceback = sys.exc_info()
         print('Error opening %s: %s' % (value.filename, value.strerror))
-        print("ERROR: Unable to update channel with overmind")
+        print("ERROR: Joined Player - Unable to update channel with overmind")
 
 def fileBasicReport(report):
     try:
         ws = getSocket()
         query = """
-        mutation file_basic_report($report: BasicTagReport!) {
+        mutation file_basic_tag_report($report: BasicTagReportInput!) {
           file_basic_tag_report(report: $report) {
             id
           }
@@ -39,13 +39,13 @@ def fileBasicReport(report):
     except:
         type, value, traceback = sys.exc_info()
         print('Error opening %s: %s' % (value.filename, value.strerror))
-        print("ERROR: Unable to update channel with overmind")
+        print("ERROR: Basic Report - Unable to update channel with overmind")
 
 def fileTeamReport(report):
     try:
         ws = getSocket()
         query = """
-        mutation file_team_tag_report($report: TeamTagReport!) {
+        mutation file_team_tag_report($report: TeamTagReportInput!) {
           file_team_tag_report(report: $report) {
             id
           }
@@ -58,5 +58,5 @@ def fileTeamReport(report):
     except:
         type, value, traceback = sys.exc_info()
         print('Error opening %s: %s' % (value.filename, value.strerror))
-        print("ERROR: Unable to update channel with overmind")
+        print("ERROR: Team Report - Unable to update channel with overmind")
 

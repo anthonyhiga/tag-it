@@ -9,13 +9,14 @@ import {
 } from "../base-types";
 
 import createGame from "./base-team-game";
+import icon from "./3-team-game-icon";
 
 const builder: GameMachineBuilder<StateMachine<SMProps, SMModel>> = {
   type: "3-team-game",
   description:
     "Players are separated into 3 teams.  Team members cannot shoot each other.",
   name: "3 Team Game",
-  iconUrl: "blank",
+  iconUrl: icon,
   build: (
     game: Game,
     onGameSettingsUpdate: (settings: GameSettings) => void

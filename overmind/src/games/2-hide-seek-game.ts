@@ -9,13 +9,14 @@ import {
 } from "../base-types";
 
 import createGame from "./base-hide-seek-game";
+import icon from "./2-hide-seek-game-icon";
 
 const builder: GameMachineBuilder<StateMachine<SMProps, SMModel>> = {
   type: "hide-seek-game",
   description:
     "2 Teams alternate between hiding and seeking every 1 minute. Starting team randomly chosen.",
   name: "Hide And Seek",
-  iconUrl: "blank",
+  iconUrl: icon,
   build: (
     game: Game,
     onGameSettingsUpdate: (settings: GameSettings) => void

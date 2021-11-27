@@ -1,6 +1,7 @@
+#!/usr/bin/env python
+
 import RPi.GPIO as GPIO
-from mfrc522 import MFRC522
-from threading import Thread 
+from mfrc522 import SimpleMFRC522
 from time import sleep
 
 

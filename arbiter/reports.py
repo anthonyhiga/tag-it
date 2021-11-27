@@ -7,7 +7,7 @@ from threading import Thread
 def subscribeReportCheckList(updateList):
     def callback(_id, data):
       try:
-        checkList = data['payload']['data']['report_check_list']
+        checkList = data['payload']['data']['report_check_list']['items']
         updateList(checkList)
 
       except:
@@ -16,40 +16,53 @@ def subscribeReportCheckList(updateList):
 
 
     def monitor():
+      sleep(4)
       while(True):
-        print("Connecting to Overmind")
+        print("Reports - Connecting to Overmind")
+        ws = None
         try:
           ws = getSocket()
           query = """
-          subscription {
+          subscription ReportsCheckList {
             report_check_list {
-              gameId
-              ltGameId
-              ltTeamId
-              ltPlayerId
-              ltTagTeamId
-              type
-              status
+              id 
+              items {
+                gameId
+                ltGameId
+                ltTeamId
+                ltPlayerId
+                ltTagTeamId
+                type
+                status
+              }
             }
           }
           """
           ws.subscribe(query, variables={}, callback=callback)
 
-          print("Connected to Overmind")
+          print("Reports - Connected to Overmind")
 
           # block this thread and do nothing unless the connection
           # is lost
           while(True):
-            if (not ws.is_running()):
-              print("Lost Connection to Overmind")
-              break
+            # we are reaching into the underlying implementation here.
+            # this is cause the graphql library doesn't have an api
+            # to see if it's died or not.
+            if not ws._connection.connected:
+              raise Exception("Reports - Lost connection with Overmind");
             sleep(1)
 
         except:
-          print("ERROR: Unable to talk with overmind")
+          print("ERROR: Unable to report to overmind, is it online?")
 
-        # retry every 20 seconds
-        sleep(10)
+        finally:
+          if ws != None:
+            ws.close()
+
+        # retry every 5 seconds
+        sleep(5)
+
+        print("Reports - Re-connecting to Overmind")
 
     thread = Thread(target=monitor)
     thread.start()

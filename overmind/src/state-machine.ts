@@ -57,7 +57,6 @@ export default class StateMachine<Props, Model> {
     const config = map(this);
     this.stateMap = config.states;
     this.currentState = config.initial;
-    console.warn(this.stateMap);
   }
 
   start() {

@@ -117,6 +117,8 @@ export class Arbiters {
       }
     });
 
+    // console.warn(settings);
+
     this.pubsub.publish(ARBITER_SETTINGS_UPDATED, {
       arbiter_settings_updated: settings[0]
     });
@@ -183,6 +185,8 @@ export class Arbiters {
         arbiterId: command.arbiterId,
         arbiter_active_commands: Commands.findActiveCommands(command.arbiterId)
       });
+    } else {
+      console.warn("WARNING: Command not found");
     }
 
     // We clean up the cache
