@@ -10,6 +10,7 @@ export type GameWizardMainQueryResponse = {
         readonly id: string;
         readonly items: ReadonlyArray<{
             readonly id: string;
+            readonly name: string | null;
             readonly status: GameStatus;
         } | null> | null;
     } | null;
@@ -27,6 +28,7 @@ query GameWizardMainQuery {
     id
     items {
       id
+      name
       status
     }
   }
@@ -64,6 +66,13 @@ v1 = [
             "alias": null,
             "args": null,
             "kind": "ScalarField",
+            "name": "name",
+            "storageKey": null
+          },
+          {
+            "alias": null,
+            "args": null,
+            "kind": "ScalarField",
             "name": "status",
             "storageKey": null
           }
@@ -92,14 +101,14 @@ return {
     "selections": (v1/*: any*/)
   },
   "params": {
-    "cacheID": "bc7590aa3494a7b3330491b5bb908e46",
+    "cacheID": "3c72b50461ca045d525bc1defbee53f4",
     "id": null,
     "metadata": {},
     "name": "GameWizardMainQuery",
     "operationKind": "query",
-    "text": "query GameWizardMainQuery {\n  active_games_list {\n    id\n    items {\n      id\n      status\n    }\n  }\n}\n"
+    "text": "query GameWizardMainQuery {\n  active_games_list {\n    id\n    items {\n      id\n      name\n      status\n    }\n  }\n}\n"
   }
 };
 })();
-(node as any).hash = 'ee6dcf37755b72ca8bff70199a2109ae';
+(node as any).hash = '0c1cb7463acb92cc85eac1f3980ac0e8';
 export default node;
