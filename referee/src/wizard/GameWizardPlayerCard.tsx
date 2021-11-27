@@ -72,7 +72,7 @@ const useStyles = makeStyles({
     height: avatarWidth,
   },
   team3avatar: {
-    backgroundColor: "yellow",
+    backgroundColor: "grey",
     width: avatarWidth,
     height: avatarWidth,
   },

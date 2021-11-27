@@ -10,11 +10,7 @@ export type GameWizardMainSubscriptionResponse = {
         readonly id: string;
         readonly items: ReadonlyArray<{
             readonly id: string;
-            readonly name: string | null;
             readonly status: GameStatus;
-            readonly ltId: string;
-            readonly startedAt: string | null;
-            readonly completedAt: string | null;
         } | null> | null;
     } | null;
 };
@@ -31,11 +27,7 @@ subscription GameWizardMainSubscription {
     id
     items {
       id
-      name
       status
-      ltId
-      startedAt
-      completedAt
     }
   }
 }
@@ -72,35 +64,7 @@ v1 = [
             "alias": null,
             "args": null,
             "kind": "ScalarField",
-            "name": "name",
-            "storageKey": null
-          },
-          {
-            "alias": null,
-            "args": null,
-            "kind": "ScalarField",
             "name": "status",
-            "storageKey": null
-          },
-          {
-            "alias": null,
-            "args": null,
-            "kind": "ScalarField",
-            "name": "ltId",
-            "storageKey": null
-          },
-          {
-            "alias": null,
-            "args": null,
-            "kind": "ScalarField",
-            "name": "startedAt",
-            "storageKey": null
-          },
-          {
-            "alias": null,
-            "args": null,
-            "kind": "ScalarField",
-            "name": "completedAt",
             "storageKey": null
           }
         ],
@@ -128,14 +92,14 @@ return {
     "selections": (v1/*: any*/)
   },
   "params": {
-    "cacheID": "bcf7a5e261bc45b9d15925c5fb19db51",
+    "cacheID": "a24077e134ae1e97cc25958411ba6f44",
     "id": null,
     "metadata": {},
     "name": "GameWizardMainSubscription",
     "operationKind": "subscription",
-    "text": "subscription GameWizardMainSubscription {\n  active_games_list {\n    id\n    items {\n      id\n      name\n      status\n      ltId\n      startedAt\n      completedAt\n    }\n  }\n}\n"
+    "text": "subscription GameWizardMainSubscription {\n  active_games_list {\n    id\n    items {\n      id\n      status\n    }\n  }\n}\n"
   }
 };
 })();
-(node as any).hash = '3e355302335b6c4fa0ea2ecfc11c2129';
+(node as any).hash = '36a5a8db86143574672fdb972aa3b658';
 export default node;

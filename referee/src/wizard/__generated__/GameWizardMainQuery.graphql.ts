@@ -10,11 +10,7 @@ export type GameWizardMainQueryResponse = {
         readonly id: string;
         readonly items: ReadonlyArray<{
             readonly id: string;
-            readonly name: string | null;
             readonly status: GameStatus;
-            readonly ltId: string;
-            readonly startedAt: string | null;
-            readonly completedAt: string | null;
         } | null> | null;
     } | null;
 };
@@ -31,11 +27,7 @@ query GameWizardMainQuery {
     id
     items {
       id
-      name
       status
-      ltId
-      startedAt
-      completedAt
     }
   }
 }
@@ -72,35 +64,7 @@ v1 = [
             "alias": null,
             "args": null,
             "kind": "ScalarField",
-            "name": "name",
-            "storageKey": null
-          },
-          {
-            "alias": null,
-            "args": null,
-            "kind": "ScalarField",
             "name": "status",
-            "storageKey": null
-          },
-          {
-            "alias": null,
-            "args": null,
-            "kind": "ScalarField",
-            "name": "ltId",
-            "storageKey": null
-          },
-          {
-            "alias": null,
-            "args": null,
-            "kind": "ScalarField",
-            "name": "startedAt",
-            "storageKey": null
-          },
-          {
-            "alias": null,
-            "args": null,
-            "kind": "ScalarField",
-            "name": "completedAt",
             "storageKey": null
           }
         ],
@@ -128,14 +92,14 @@ return {
     "selections": (v1/*: any*/)
   },
   "params": {
-    "cacheID": "5bfe65917af2a265fcc734c12c34d94e",
+    "cacheID": "bc7590aa3494a7b3330491b5bb908e46",
     "id": null,
     "metadata": {},
     "name": "GameWizardMainQuery",
     "operationKind": "query",
-    "text": "query GameWizardMainQuery {\n  active_games_list {\n    id\n    items {\n      id\n      name\n      status\n      ltId\n      startedAt\n      completedAt\n    }\n  }\n}\n"
+    "text": "query GameWizardMainQuery {\n  active_games_list {\n    id\n    items {\n      id\n      status\n    }\n  }\n}\n"
   }
 };
 })();
-(node as any).hash = 'eac1cc480500920307a9b683aa88a94e';
+(node as any).hash = 'ee6dcf37755b72ca8bff70199a2109ae';
 export default node;

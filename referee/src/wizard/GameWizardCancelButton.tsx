@@ -10,9 +10,9 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation } from "react-relay";
 
-type Props = { id: string };
+type Props = { id: string; end?: boolean };
 
-export default function GameWizardCancelButton({ id }: Props) {
+export default function GameWizardCancelButton({ id, end }: Props) {
   const { t } = useTranslation("referee");
   const [commit] = useMutation(
     graphql`
@@ -29,7 +29,7 @@ export default function GameWizardCancelButton({ id }: Props) {
 
   return (
     <Button variant="contained" onClick={onClick}>
-      {t("Cancel")}
+      {end === true ? t("Close") : t("Cancel")}
     </Button>
   );
 }

@@ -17,10 +17,16 @@ import React, { Suspense, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useLazyLoadQuery, useSubscription } from "react-relay";
 import GameWizardLoading from "./GameWizardLoading";
+import GameWizardScoreBoard from "./GameWizardScoreBoard";
+import GameWizardScoring from "./GameWizardScoring";
+import GameWizardRunning from "./GameWizardRunning";
 import GameWizardRegistration from "./GameWizardRegistration";
 import GameWizardSetup from "./GameWizardSetup";
 import GameWizardTypeSelector from "./GameWizardTypeSelector";
-import type { GameWizardMainQuery } from "./__generated__/GameWizardMainQuery.graphql";
+import type {
+  GameStatus,
+  GameWizardMainQuery,
+} from "./__generated__/GameWizardMainQuery.graphql";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -43,8 +49,25 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-function useSteps() {
-  return [
+function WizardStepper({
+  activeStep,
+  id,
+}: {
+  activeStep: GameStatus;
+  id: string;
+}) {
+  const stepMap: {
+    [K in GameStatus]: number;
+  } = {
+    "COMPLETE": 0,
+    "SETUP": 1,
+    "REGISTRATION": 2,
+    "RUNNING": 3,
+    "SCORING": 4,
+    "AWARDS": 5,
+    "%future added value": 0,
+  };
+  const steps = [
     "Select type of Game",
     "Customize your Game",
     "Organize Players",
@@ -52,13 +75,9 @@ function useSteps() {
     "Collect Player Stats",
     "Scores",
   ];
-}
-
-function WizardStepper({ activeStep, id }: { activeStep: number; id: string }) {
-  const steps = useSteps();
 
   return (
-    <Stepper activeStep={activeStep}>
+    <Stepper activeStep={stepMap[activeStep]}>
       {steps.map((label, index) => {
         const stepProps = {};
         const labelProps = {};
@@ -84,11 +103,7 @@ function GameWizardContent() {
             id
             items {
               id
-              name
               status
-              ltId
-              startedAt
-              completedAt
             }
           }
         }
@@ -105,11 +120,7 @@ function GameWizardContent() {
           id
           items {
             id
-            name
             status
-            ltId
-            startedAt
-            completedAt
           }
         }
       }
@@ -119,37 +130,35 @@ function GameWizardContent() {
   );
 
   const items = data?.active_games_list?.items ?? [];
+  const activeGame =
+    items.length > 0 && items[0]?.status !== "COMPLETE" ? items[0] : null;
 
-  let activeGame = items.length > 0 ? items[0] : null;
-  if (activeGame?.status === "COMPLETE") {
-    activeGame = null;
-  }
-  let activeStep = 0;
-  if (activeGame && activeGame.status === "SETUP") {
-    activeStep = 1;
-  } else if (activeGame && activeGame.status === "REGISTRATION") {
-    activeStep = 2;
-  } else if (activeGame && activeGame.status === "RUNNING") {
-    activeStep = 3;
-  } else if (activeGame && activeGame.status === "SCORING") {
-    activeStep = 4;
-  } else if (activeGame && activeGame.status === "AWARDS") {
-    activeStep = 5;
-  }
+  const activeStep: GameStatus =
+    activeGame?.status === "SETUP" ||
+    activeGame?.status === "REGISTRATION" ||
+    activeGame?.status === "RUNNING" ||
+    activeGame?.status === "SCORING" ||
+    activeGame?.status === "AWARDS"
+      ? activeGame.status
+      : "COMPLETE";
+
   const id = activeGame?.id ?? "";
 
   return (
     <>
       <WizardStepper activeStep={activeStep} id={id} />
-      {activeStep !== 0 && (
+      {activeStep !== "COMPLETE" && (
         <Typography variant="h6">
           {t("GAME: ")}
           {id}
         </Typography>
       )}
-      {activeStep == 0 && <GameWizardTypeSelector />}
-      {activeStep == 1 && <GameWizardSetup id={id} />}
-      {activeStep == 2 && <GameWizardRegistration id={id} />}
+      {activeStep === "COMPLETE" && <GameWizardTypeSelector />}
+      {activeStep === "SETUP" && <GameWizardSetup id={id} />}
+      {activeStep === "REGISTRATION" && <GameWizardRegistration id={id} />}
+      {activeStep === "RUNNING" && <GameWizardRunning id={id} />}
+      {activeStep === "SCORING" && <GameWizardScoring id={id} />}
+      {activeStep === "AWARDS" && <GameWizardScoreBoard id={id} />}
     </>
   );
 }

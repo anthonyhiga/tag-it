@@ -3,14 +3,14 @@
  *
  * License: Apache v2.0
  */
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import {
-  graphql,
   requestSubscription,
   commitMutation,
   useLazyLoadQuery,
 } from "react-relay";
+import { graphql } from "babel-plugin-relay/macro";
 import {
   AppBar,
   Avatar,
@@ -22,8 +22,10 @@ import {
   TableRow,
   TableBody,
   Toolbar,
+  GridSize,
+  Typography,
 } from "@material-ui/core";
-import GameEndButton from "../GameEndButton";
+import GameWizardCancelButton from "./GameWizardCancelButton";
 import type {
   GameWizardScoreBoardQuery,
   PlayerStatus,
@@ -99,56 +101,11 @@ const useStyles = makeStyles((theme) => ({
     height: avatarWidth,
   },
   team3avatar: {
-    backgroundColor: "yellow",
+    backgroundColor: "grey",
     width: avatarWidth,
     height: avatarWidth,
   },
 }));
-
-const GameScoreTable = ({
-  gameScore,
-  playerMap,
-  teamId,
-  isAlive,
-}: {
-  gameScore: (ScoreRecord | null)[];
-  playerMap: { [id: string]: PlayerRecord };
-  teamId: string;
-  isAlive: (timeLived: number) => boolean;
-}) => {
-  return (
-    <Table size="small">
-      <TableHead>
-        <TableRow>
-          <TableCell>Icon</TableCell>
-          <TableCell>Name</TableCell>
-          <TableCell>Scored</TableCell>
-          <TableCell>Received</TableCell>
-          <TableCell>Survived</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {gameScore.map((item) => {
-          if (item?.playerId == null) {
-            return null;
-          }
-          const player = playerMap[item.playerId];
-          return item.ltTeamId == teamId ? (
-            <TableRow>
-              <TableCell>
-                <Avatar src={player?.avatarUrl} />
-              </TableCell>
-              <TableCell>{player?.name}</TableCell>
-              <TableCell>{item.totalTagsGiven}</TableCell>
-              <TableCell>{item.totalTagsReceived}</TableCell>
-              <TableCell>{item.survivedTimeSec} (s)</TableCell>
-            </TableRow>
-          ) : null;
-        })}
-      </TableBody>
-    </Table>
-  );
-};
 
 export default function GameWizardScoreBoard({ id }: Props) {
   const data = useLazyLoadQuery<GameWizardScoreBoardQuery>(
@@ -195,91 +152,187 @@ export default function GameWizardScoreBoard({ id }: Props) {
     { fetchPolicy: "store-and-network" },
   );
 
-  const classes = useStyles();
-  const avatarMap = (ltTeamId: number) => {
-    let avatarType = classes.avatar;
-    if (ltTeamId == 0) {
-      avatarType = classes.soloavatar;
-    }
-    if (ltTeamId == 1) {
-      avatarType = classes.team1avatar;
-    }
-    if (ltTeamId == 2) {
-      avatarType = classes.team2avatar;
-    }
-    if (ltTeamId == 3) {
-      avatarType = classes.team3avatar;
-    }
-    return avatarType;
-  };
-
-  const playerMap: {
-    [id: string]: PlayerRecord;
-  } = {};
-  data?.game_players_list?.items?.forEach((item) => {
-    if (item != null) {
-      playerMap[item.id] = item;
-    }
-  });
-  const isAlive = (timeLived: number): boolean => {
-    return (data?.game_settings?.gameLengthInMin ?? 0) * 60 <= timeLived;
-  };
-
-  const gameScore = [...(data.game_score ?? [])];
-  gameScore.sort((a, b) => {
-    if (a == null || b == null) {
-      return 0;
-    }
-    return (
-      b.totalTagsGiven - a.totalTagsGiven ||
-      a.totalTagsReceived - b.totalTagsReceived
-    );
-  });
-
-  const teamSummary = [];
-  for (let i = 0; i <= 3; i++) {
-    let score = 0;
-    let players = 0;
-    gameScore.forEach((item) => {
-      if (item?.ltTeamId != i.toString()) {
-        return;
+  const styles = useStyles();
+  const avatarMap = useCallback(
+    (ltTeamId: number) => {
+      let avatarType = styles.avatar;
+      if (ltTeamId == 0) {
+        avatarType = styles.soloavatar;
       }
-      score += item.totalTagsGiven;
-      players++;
+      if (ltTeamId == 1) {
+        avatarType = styles.team1avatar;
+      }
+      if (ltTeamId == 2) {
+        avatarType = styles.team2avatar;
+      }
+      if (ltTeamId == 3) {
+        avatarType = styles.team3avatar;
+      }
+      return avatarType;
+    },
+    [styles],
+  );
+
+  const isAlive = useCallback(
+    (timeLived: number): boolean => {
+      return (data?.game_settings?.gameLengthInMin ?? 0) * 60 <= timeLived;
+    },
+    [data?.game_settings?.gameLengthInMin],
+  );
+
+  const playerMap = useMemo(() => {
+    const result: {
+      [id: string]: PlayerRecord;
+    } = {};
+
+    data?.game_players_list?.items?.forEach((item) => {
+      if (item != null) {
+        result[item.id] = item;
+      }
     });
-    if (players > 0) {
-      teamSummary.push({
-        teamId: i,
-        score,
-        players,
+    return result;
+  }, [data?.game_players_list?.items]);
+
+  const {
+    mvpWinningScore,
+    gameScore,
+    teamWinningScore,
+    teamTotalWinners,
+    teamSummary,
+  } = useMemo(() => {
+    const gameScore = [...(data.game_score ?? [])];
+    gameScore.sort((a, b) => {
+      if (a == null || b == null) {
+        return 0;
+      }
+      return (
+        b.totalTagsGiven - a.totalTagsGiven ||
+        a.totalTagsReceived - b.totalTagsReceived
+      );
+    });
+
+    let teamWinningScore: number = 0;
+    let teamTotalWinners: number = 0;
+    let mvpWinningScore: number = -10000;
+
+    const teamSummary = [];
+    for (let i = 0; i <= 3; i++) {
+      let score = 0;
+      let players = 0;
+      gameScore.forEach((item) => {
+        if (item?.ltTeamId != i.toString()) {
+          return;
+        }
+        score += item.totalTagsGiven;
+        const mvpScore = item.totalTagsGiven - item.totalTagsReceived;
+        if (mvpScore > mvpWinningScore) {
+          mvpWinningScore = mvpScore;
+        }
+        players++;
       });
+      if (score > teamWinningScore) {
+        teamWinningScore = score;
+      }
+      if (players > 0) {
+        teamSummary.push({
+          teamId: i,
+          score,
+          players,
+        });
+      }
     }
+
+    teamSummary.forEach((team) => {
+      if (team.score === teamWinningScore) {
+        teamTotalWinners++;
+      }
+    });
+
+    return {
+      mvpWinningScore,
+      teamSummary,
+      gameScore,
+      teamTotalWinners,
+      teamWinningScore,
+    };
+  }, [data?.game_score]);
+
+  let cols: GridSize = 12;
+  switch (teamSummary.length) {
+    case 1:
+      cols = 12;
+      break;
+    case 2:
+      cols = 6;
+      break;
+    case 3:
+      cols = 4;
+      break;
   }
 
   return (
     <>
-      <Grid container spacing={3} justify="space-around">
+      <br />
+      <br />
+      <Grid container spacing={4} justify="space-around">
         {teamSummary.map((summary) => (
-          <Grid item xs>
-            <Grid container>
-              <Grid item xs>
-                <Avatar
-                  aria-label="Recipe"
-                  className={avatarMap(summary.teamId)}
-                >
-                  {summary.teamId}
-                </Avatar>
+          <Grid item xs={cols}>
+            {teamSummary.length > 1 && (
+              <Grid container>
+                <Grid item xs>
+                  <Avatar
+                    aria-label="Recipe"
+                    className={avatarMap(summary.teamId)}
+                  >
+                    {summary.teamId}
+                  </Avatar>
+                </Grid>
+                <Grid item xs>
+                  <Typography variant="h5">
+                    Team {summary.teamId} - Score: {summary.score}
+                    {summary.score === teamWinningScore
+                      ? teamTotalWinners > 1
+                        ? "(Tie)"
+                        : "(Winner)"
+                      : null}
+                  </Typography>
+                </Grid>
               </Grid>
-              <Grid item xs>
-                Team {summary.teamId} Score: {summary.score}
-              </Grid>
-            </Grid>
-            <GameScoreTable
-              teamId={summary.teamId.toString()}
-              gameScore={gameScore}
-              playerMap={playerMap}
-              isAlive={isAlive}
-            />
+            )}
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Icon</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Score</TableCell>
+                  <TableCell>Injured</TableCell>
+                  <TableCell>Lifespan</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {gameScore.map((item) => {
+                  if (item?.playerId == null) {
+                    return null;
+                  }
+                  const player = playerMap[item.playerId];
+                  return item.ltTeamId == summary.teamId.toString() ? (
+                    <TableRow>
+                      <TableCell>
+                        <Avatar src={player?.avatarUrl} />
+                      </TableCell>
+                      <TableCell>
+                        {player?.name}
+                        {item.totalTagsGiven - item.totalTagsReceived ===
+                          mvpWinningScore && " (MVP)"}
+                      </TableCell>
+                      <TableCell>{item.totalTagsGiven}</TableCell>
+                      <TableCell>{item.totalTagsReceived}</TableCell>
+                      <TableCell>{item.survivedTimeSec}(s)</TableCell>
+                    </TableRow>
+                  ) : null;
+                })}
+              </TableBody>
+            </Table>
           </Grid>
         ))}
       </Grid>
@@ -293,7 +346,7 @@ export default function GameWizardScoreBoard({ id }: Props) {
       >
         <Toolbar>
           <Box flexGrow={1} />
-          <GameEndButton game={{ id }} />
+          <GameWizardCancelButton id={id} end={true} />
         </Toolbar>
       </AppBar>
     </>
