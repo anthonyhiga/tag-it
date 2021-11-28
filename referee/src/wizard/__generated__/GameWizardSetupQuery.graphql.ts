@@ -14,6 +14,7 @@ export type GameWizardSetupQueryResponse = {
         readonly shields: number | null;
         readonly megatags: number | null;
         readonly totalTeams: number | null;
+        readonly options: ReadonlyArray<string | null> | null;
     } | null;
 };
 export type GameWizardSetupQuery = {
@@ -34,6 +35,7 @@ query GameWizardSetupQuery(
     shields
     megatags
     totalTeams
+    options
     id
   }
 }
@@ -95,6 +97,13 @@ v7 = {
   "kind": "ScalarField",
   "name": "totalTeams",
   "storageKey": null
+},
+v8 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "options",
+  "storageKey": null
 };
 return {
   "fragment": {
@@ -116,7 +125,8 @@ return {
           (v4/*: any*/),
           (v5/*: any*/),
           (v6/*: any*/),
-          (v7/*: any*/)
+          (v7/*: any*/),
+          (v8/*: any*/)
         ],
         "storageKey": null
       }
@@ -144,6 +154,7 @@ return {
           (v5/*: any*/),
           (v6/*: any*/),
           (v7/*: any*/),
+          (v8/*: any*/),
           {
             "alias": null,
             "args": null,
@@ -157,14 +168,14 @@ return {
     ]
   },
   "params": {
-    "cacheID": "be4d922ae0daab6f993f77bf52aa2f1a",
+    "cacheID": "f4924d1a43957d5ee260faf2d210b39f",
     "id": null,
     "metadata": {},
     "name": "GameWizardSetupQuery",
     "operationKind": "query",
-    "text": "query GameWizardSetupQuery(\n  $id: ID!\n) {\n  game_settings(id: $id) {\n    gameLengthInMin\n    health\n    reloads\n    shields\n    megatags\n    totalTeams\n    id\n  }\n}\n"
+    "text": "query GameWizardSetupQuery(\n  $id: ID!\n) {\n  game_settings(id: $id) {\n    gameLengthInMin\n    health\n    reloads\n    shields\n    megatags\n    totalTeams\n    options\n    id\n  }\n}\n"
   }
 };
 })();
-(node as any).hash = '325cf5ca008ed512e0ef46d348d4603f';
+(node as any).hash = '167c6541134bc1d04573e3b19c11cb9f';
 export default node;

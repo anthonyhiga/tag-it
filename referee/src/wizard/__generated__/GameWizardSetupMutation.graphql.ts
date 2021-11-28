@@ -26,6 +26,7 @@ export type GameWizardSetupMutationResponse = {
         readonly shields: number | null;
         readonly megatags: number | null;
         readonly totalTeams: number | null;
+        readonly options: ReadonlyArray<string | null> | null;
     } | null;
 };
 export type GameWizardSetupMutation = {
@@ -48,6 +49,7 @@ mutation GameWizardSetupMutation(
     shields
     megatags
     totalTeams
+    options
   }
 }
 */
@@ -133,6 +135,13 @@ v1 = [
         "kind": "ScalarField",
         "name": "totalTeams",
         "storageKey": null
+      },
+      {
+        "alias": null,
+        "args": null,
+        "kind": "ScalarField",
+        "name": "options",
+        "storageKey": null
       }
     ],
     "storageKey": null
@@ -156,14 +165,14 @@ return {
     "selections": (v1/*: any*/)
   },
   "params": {
-    "cacheID": "7d2670273b0c6d4115e01b5708ffb09a",
+    "cacheID": "a01ae6cced3d6d796764df2da9eccbc7",
     "id": null,
     "metadata": {},
     "name": "GameWizardSetupMutation",
     "operationKind": "mutation",
-    "text": "mutation GameWizardSetupMutation(\n  $id: ID!\n  $settings: GameSettingsInput!\n) {\n  update_game_settings(id: $id, settings: $settings) {\n    id\n    gameLengthInMin\n    health\n    reloads\n    shields\n    megatags\n    totalTeams\n  }\n}\n"
+    "text": "mutation GameWizardSetupMutation(\n  $id: ID!\n  $settings: GameSettingsInput!\n) {\n  update_game_settings(id: $id, settings: $settings) {\n    id\n    gameLengthInMin\n    health\n    reloads\n    shields\n    megatags\n    totalTeams\n    options\n  }\n}\n"
   }
 };
 })();
-(node as any).hash = '40fa20567ca70a77056735c65802cec1';
+(node as any).hash = 'dc85af9c4d03f238a1f0d292b2690221';
 export default node;

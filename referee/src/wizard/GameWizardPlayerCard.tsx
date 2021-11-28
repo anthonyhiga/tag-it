@@ -115,7 +115,7 @@ export default function GameWizardPlayerCard({ player }: Props) {
   if (data?.ltTeamId === "2") {
     avatarType = styles.team2avatar;
   }
-  if (data?.ltTeamId === "2") {
+  if (data?.ltTeamId === "3") {
     avatarType = styles.team3avatar;
   }
 

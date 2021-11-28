@@ -103,6 +103,7 @@ function GameWizardContent() {
             id
             items {
               id
+              name
               status
             }
           }
@@ -145,6 +146,7 @@ function GameWizardContent() {
 
   const id = activeGame?.id ?? "";
   const name = activeGame?.name ?? "";
+  console.warn(activeGame);
 
   return (
     <>
@@ -152,7 +154,7 @@ function GameWizardContent() {
       {activeStep !== "COMPLETE" && (
         <Typography variant="h6">
           {t("GAME: ")}
-          {id} : {name}
+          {id} - {name}
         </Typography>
       )}
       {activeStep === "COMPLETE" && <GameWizardTypeSelector />}

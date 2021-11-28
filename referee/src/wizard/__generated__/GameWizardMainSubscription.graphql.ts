@@ -10,6 +10,7 @@ export type GameWizardMainSubscriptionResponse = {
         readonly id: string;
         readonly items: ReadonlyArray<{
             readonly id: string;
+            readonly name: string | null;
             readonly status: GameStatus;
         } | null> | null;
     } | null;
@@ -27,6 +28,7 @@ subscription GameWizardMainSubscription {
     id
     items {
       id
+      name
       status
     }
   }
@@ -64,6 +66,13 @@ v1 = [
             "alias": null,
             "args": null,
             "kind": "ScalarField",
+            "name": "name",
+            "storageKey": null
+          },
+          {
+            "alias": null,
+            "args": null,
+            "kind": "ScalarField",
             "name": "status",
             "storageKey": null
           }
@@ -92,14 +101,14 @@ return {
     "selections": (v1/*: any*/)
   },
   "params": {
-    "cacheID": "a24077e134ae1e97cc25958411ba6f44",
+    "cacheID": "56aa3117979ddbc0f93c1c5c466ab0b9",
     "id": null,
     "metadata": {},
     "name": "GameWizardMainSubscription",
     "operationKind": "subscription",
-    "text": "subscription GameWizardMainSubscription {\n  active_games_list {\n    id\n    items {\n      id\n      status\n    }\n  }\n}\n"
+    "text": "subscription GameWizardMainSubscription {\n  active_games_list {\n    id\n    items {\n      id\n      name\n      status\n    }\n  }\n}\n"
   }
 };
 })();
-(node as any).hash = '36a5a8db86143574672fdb972aa3b658';
+(node as any).hash = '67c58e7b5e7725b1a9ef05fe86209e9f';
 export default node;
