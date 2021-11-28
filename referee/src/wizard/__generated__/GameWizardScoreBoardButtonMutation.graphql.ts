@@ -3,26 +3,26 @@
 // @ts-nocheck
 
 import { ConcreteRequest } from "relay-runtime";
-export type GameWizardCancelButtonMutationVariables = {
+export type GameWizardScoreBoardButtonMutationVariables = {
     id: string;
 };
-export type GameWizardCancelButtonMutationResponse = {
-    readonly cancel_game: {
+export type GameWizardScoreBoardButtonMutationResponse = {
+    readonly end_game: {
         readonly id: string;
     } | null;
 };
-export type GameWizardCancelButtonMutation = {
-    readonly response: GameWizardCancelButtonMutationResponse;
-    readonly variables: GameWizardCancelButtonMutationVariables;
+export type GameWizardScoreBoardButtonMutation = {
+    readonly response: GameWizardScoreBoardButtonMutationResponse;
+    readonly variables: GameWizardScoreBoardButtonMutationVariables;
 };
 
 
 
 /*
-mutation GameWizardCancelButtonMutation(
+mutation GameWizardScoreBoardButtonMutation(
   $id: ID!
 ) {
-  cancel_game(id: $id) {
+  end_game(id: $id) {
     id
   }
 }
@@ -48,7 +48,7 @@ v1 = [
     ],
     "concreteType": "Game",
     "kind": "LinkedField",
-    "name": "cancel_game",
+    "name": "end_game",
     "plural": false,
     "selections": [
       {
@@ -67,7 +67,7 @@ return {
     "argumentDefinitions": (v0/*: any*/),
     "kind": "Fragment",
     "metadata": null,
-    "name": "GameWizardCancelButtonMutation",
+    "name": "GameWizardScoreBoardButtonMutation",
     "selections": (v1/*: any*/),
     "type": "Mutation",
     "abstractKey": null
@@ -76,18 +76,18 @@ return {
   "operation": {
     "argumentDefinitions": (v0/*: any*/),
     "kind": "Operation",
-    "name": "GameWizardCancelButtonMutation",
+    "name": "GameWizardScoreBoardButtonMutation",
     "selections": (v1/*: any*/)
   },
   "params": {
-    "cacheID": "9bd088ee24eaf04fc261896744938cf0",
+    "cacheID": "08f5c58f9d0bfc98e9eb803f2a0b8028",
     "id": null,
     "metadata": {},
-    "name": "GameWizardCancelButtonMutation",
+    "name": "GameWizardScoreBoardButtonMutation",
     "operationKind": "mutation",
-    "text": "mutation GameWizardCancelButtonMutation(\n  $id: ID!\n) {\n  cancel_game(id: $id) {\n    id\n  }\n}\n"
+    "text": "mutation GameWizardScoreBoardButtonMutation(\n  $id: ID!\n) {\n  end_game(id: $id) {\n    id\n  }\n}\n"
   }
 };
 })();
-(node as any).hash = '471b5a4d9286c79f60b3c71e3f79b997';
+(node as any).hash = '473acc8d3685282e296531db53344ba2';
 export default node;

@@ -9,6 +9,7 @@ import {
   requestSubscription,
   commitMutation,
   useLazyLoadQuery,
+  useMutation,
 } from "react-relay";
 import { graphql } from "babel-plugin-relay/macro";
 import {
@@ -24,12 +25,13 @@ import {
   Toolbar,
   GridSize,
   Typography,
+  Button,
 } from "@material-ui/core";
-import GameWizardCancelButton from "./GameWizardCancelButton";
 import type {
   GameWizardScoreBoardQuery,
   PlayerStatus,
 } from "./__generated__/GameWizardScoreBoardQuery.graphql";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   id: string;
@@ -108,6 +110,20 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 export default function GameWizardScoreBoard({ id }: Props) {
+  const { t } = useTranslation("referee");
+  const [commit] = useMutation(
+    graphql`
+      mutation GameWizardScoreBoardButtonMutation($id: ID!) {
+        end_game(id: $id) {
+          id
+        }
+      }
+    `,
+  );
+  const onClick = useCallback(() => {
+    commit({ variables: { id } });
+  }, [id]);
+
   const data = useLazyLoadQuery<GameWizardScoreBoardQuery>(
     graphql`
       query GameWizardScoreBoardQuery($id: ID!) {
@@ -346,7 +362,9 @@ export default function GameWizardScoreBoard({ id }: Props) {
       >
         <Toolbar>
           <Box flexGrow={1} />
-          <GameWizardCancelButton id={id} end={true} />
+          <Button variant="contained" onClick={onClick}>
+            {t("Close")}
+          </Button>
         </Toolbar>
       </AppBar>
     </>

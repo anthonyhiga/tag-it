@@ -80,6 +80,10 @@ type GamePlayer {
   totemId: ID!
   avatarUrl: String!
   iconUrl: String!
+  health: Int
+  reloads: Int
+  shields: Int
+  megatags: Int
 }
 
 type GamePlayerList {
@@ -152,6 +156,7 @@ type Mutation {
   create_game(type: String!, name: String): Game
   end_game(id: ID!): Game
   cancel_game(id: ID!): Game
+  continue_game(id: ID!): Game
   update_game_settings(id: ID!, settings: GameSettingsInput!): GameSettings
   start_game(id: ID!): Game
   start_registration(id: ID!): Game

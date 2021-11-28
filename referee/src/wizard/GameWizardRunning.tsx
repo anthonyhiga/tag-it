@@ -3,11 +3,11 @@
  *
  * License: Apache v2.0
  */
-import { AppBar, Box, Toolbar, Typography } from "@material-ui/core";
+import { AppBar, Box, Button, Toolbar, Typography } from "@material-ui/core";
 import { graphql } from "babel-plugin-relay/macro";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLazyLoadQuery } from "react-relay";
+import { useLazyLoadQuery, useMutation } from "react-relay";
 import GameWizardCancelButton from "./GameWizardCancelButton";
 import type { GameWizardRunningQuery } from "./__generated__/GameWizardRunningQuery.graphql";
 
@@ -17,6 +17,21 @@ const FUDGE = 3000;
 
 export default function GameWizardRegistration({ id }: Props) {
   const { t } = useTranslation("referee");
+
+  const [commit] = useMutation(
+    graphql`
+      mutation GameWizardRunningContinueButtonMutation($id: ID!) {
+        continue_game(id: $id) {
+          id
+        }
+      }
+    `,
+  );
+
+  const onClick = useCallback(() => {
+    commit({ variables: { id } });
+  }, [id]);
+
   const data = useLazyLoadQuery<GameWizardRunningQuery>(
     graphql`
       query GameWizardRunningQuery($id: ID!) {
@@ -100,6 +115,10 @@ export default function GameWizardRegistration({ id }: Props) {
       >
         <Toolbar>
           <Box flexGrow={1} />
+          <Button variant="contained" onClick={onClick}>
+            {t("Continue - Game Has a Winner")}
+          </Button>
+          <Box sx={{ width: 10 }} />
           <GameWizardCancelButton id={id} />
         </Toolbar>
       </AppBar>
