@@ -119,7 +119,11 @@ class Players {
       ltGameId: null,
       ltTeamId: null,
       ltPlayerId: null,
-      status: "IDLE"
+      status: "IDLE",
+      health: null,
+      reloads: null,
+      shields: null,
+      megatags: null,
     };
     this.data[player.id] = player;
     console.log("ADDING NEW PLAYER: " + player.id);

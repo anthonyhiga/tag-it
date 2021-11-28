@@ -9,12 +9,13 @@ import {
 } from "../base-types";
 
 import createGame from "./base-team-game";
+import icon from "./solo-game-icon";
 
 const builder: GameMachineBuilder<StateMachine<SMProps, SMModel>> = {
   type: "solo-game",
   description: "Every Player for themselves.",
-  name: "Solo Game",
-  iconUrl: "blank",
+  name: "Solo",
+  iconUrl: icon,
   build: (
     game: Game,
     onGameSettingsUpdate: (settings: GameSettings) => void

@@ -126,9 +126,12 @@ export class GameManager {
   };
 
   getReportItemList = () => {
-    return Object.keys(this.reportCheckListCache)
-      .sort()
-      .map(key => this.reportCheckListCache[key]);
+    return {
+      id: 77777777,
+      items:Object.keys(this.reportCheckListCache)
+        .sort()
+        .map(key => this.reportCheckListCache[key])
+    };
   };
 
   updateGameState = (id: number, status: GameState) => {
@@ -166,6 +169,9 @@ export class GameManager {
               items: results[1]
 	    }
           });
+          this.pubsub.publish(REPORT_CHECKLIST_UPDATED, {
+            report_check_list: this.getReportItemList()
+          });
         });
       });
   };
@@ -201,7 +207,7 @@ export class GameManager {
           ltTagsGiven[id] = 0;
         }
         ltTagsGiven[id] += tags;
-        console.log(id + ":" + tags);
+        // console.log(id + ":" + tags);
       });
     }
 
@@ -359,7 +365,7 @@ export class GameManager {
     // This is coming from a client
     if (this.gameMachineBuilderCache[args.type] == null) {
       console.warn("NO MACHINE REGISTERED FOR TYPE: " + args.type);
-      return null;
+      return {};
     }
 
     const game: Game = await Game.create({
@@ -435,6 +441,7 @@ export class GameManager {
     // This is coming from a client
     if (this.gameMachineCache[args.id]) {
       delete this.gameMachineCache[args.id];
+      this.reportCheckListCache = {};
       console.log("CLEARING GAME MACHINE");
       console.log("CANCEL GAME: " + args.id);
     } else {
@@ -448,6 +455,7 @@ export class GameManager {
     if (this.gameMachineCache[args.id]) {
       this.gameMachineCache[args.id].model().onGameEnd();
       delete this.gameMachineCache[args.id];
+      this.reportCheckListCache = {};
       console.log("CLEARING GAME MACHINE");
       console.log("END GAME: " + args.id);
     } else {
@@ -468,7 +476,7 @@ export class GameManager {
 
   fileBasicTagReportMutation = async (root: any, args: any) => {
     // This is coming from the arbiter
-    //console.warn(args.report)
+    console.warn(args.report)
 
     const key = this.reportItemKey(args.report);
     console.warn("GOT BASIC REPORT: " + key);
@@ -513,13 +521,14 @@ export class GameManager {
     }
 
     this.checkAndFinalizeScore();
-    return null;
+    const {gameId} = args.report;
+    return await Game.findByPk(gameId);
   };
 
   fileTeamTagReport = async (root: any, args: any) => {
     // This is coming from the arbiter
 
-    //console.warn(args.report)
+    console.warn(args.report)
     const report = args.report;
 
     const key = this.reportItemKey(report);
@@ -553,7 +562,8 @@ export class GameManager {
     });
 
     this.checkAndFinalizeScore();
-    return null;
+    const {gameId} = args.report;
+    return await Game.findByPk(gameId);
   };
 
   joinedPlayerMutation = async (root: any, args: any) => {
@@ -618,7 +628,8 @@ export class GameManager {
             items
           };
 	},
-        game: async (root: any, args: any) => await Game.findByPk(args.id)
+        game: async (root: any, args: any) => await Game.findByPk(args.id),
+        report_check_list: async () => this.getReportItemList(),
       },
 
       Mutation: {

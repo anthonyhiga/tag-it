@@ -1,2 +1,6 @@
 Initial Readme
 
+Don't forget to enable the SPI features on your device
+
+Raspberry PI Configuration -> Enable SPI
+

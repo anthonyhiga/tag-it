@@ -28,13 +28,14 @@ class AddPlayerState(Enum):
 #
 ###############################################################################
 class Executor(object):
-    def __init__(self, name, type, inputPort, outputPort, handlers):
+    def __init__(self, name, type, inputPort, outputPort, handlers, options):
         self.name = name
         self.type = type
         self.handlers = handlers
         self.totemId = None
         self.reportCheckList = []
         self.gameActive = False
+        self.options = options;
 
         self.log("CHANNEL - SETUP INPUT: " + str(inputPort) + " OUTPUT: " + str(outputPort))
 
@@ -98,17 +99,17 @@ class Executor(object):
         self.requestPlayer()
 
     def onStandardBeacon(self, team, tag): 
-        self.log("Beacon - Standard Received")
+        # self.log("Beacon - Standard Received")
         # Ignore for now
         None
 
     def onAdvancedBeacon(self, team, player, tag, shield, life): 
-        self.log("Beacon - Advanced Received")
+        # self.log("Beacon - Advanced Received")
         # Ignore for now
         None
 
     def onZoneBeacon(self, team, tag, flex): 
-        self.log("Beacon - Zone Received")
+        # self.log("Beacon - Zone Received")
         # Ignore for now
         None
 
@@ -121,7 +122,7 @@ class Executor(object):
         message = decodeMessage(raw)
         if (message != None):
             type = message['type']
-            #self.log("GOT MESSAGE: " + type.name)
+            self.log("GOT MESSAGE: " + type.name)
             if (type == MessageType.REQUEST_TO_JOIN and self.addPlayerState == AddPlayerState.ADVERTISE):
                 self.log("PLAYER - JOIN REQUEST RECEIVED FROM TAGGER: " + str(message['taggerId']))
                 self.setPlayerState(AddPlayerState.ASSIGNED)
@@ -179,6 +180,7 @@ class Executor(object):
           queryList = []
           baseQueryList = []
           teamQueryList = []
+
           for item in reportCheckList:
             if item['status'] == 'COMPLETE':
               continue
@@ -195,6 +197,10 @@ class Executor(object):
             key = getTeamKey(item, item['ltTagTeamId'])
             if not key in teamQueryList:
               teamQueryList.append(key)
+
+          if len(queryList) == 0:
+              sleep(5)
+              continue
 
           for player in queryList:
             summary = 0
@@ -221,8 +227,7 @@ class Executor(object):
                 " TEAM 3: " + str(team3Report) +
                 " SUMMARY: " + str(summary))
 
-            for i in range(0, 3):
-              message = genRequestTagReport(
+            message = genRequestTagReport(
                     int(player['ltGameId']),
                     int(player['ltTeamId']),
                     int(player['ltPlayerId']),
@@ -230,24 +235,22 @@ class Executor(object):
                     team2Report,
                     team3Report,
                     summary)
-              self.outputStream.send(message)
-              sleep(1.5) # we wait 3 seconds for a response
+            self.outputStream.send(message)
+            sleep(1.5) # we wait 1.5 seconds for a response
 
         except: 
           self.log("ERROR - Unexpected error:", sys.exc_info()[0])
           traceback.print_tb(sys.exc_info()[2])
 
-        sleep(2)
-
     def startGame(self, gameId, countDownSec, team1Count, team2Count, team3Count):
         self.log("START - BEGINNING COUNTDOWN")
         self.gameActive = True
 
-        if self.type != 'AREA':
+        if not self.options['AllowGameStart']:
             return
 
         self.log("BROADCASTING START")
-        thread = Thread(target=self.startThread, 
+        thread = Thread(target=self.countdownThread, 
                 args=(gameId, countDownSec, team1Count, team2Count, team3Count))
         thread.start()
 
@@ -280,7 +283,7 @@ class Executor(object):
         thread = Thread(target=self.zoneLoop)
         thread.start()
         
-    def startThread(self, gameId, countDownSec, team1Count, team2Count, team3Count):
+    def countdownThread(self, gameId, countDownSec, team1Count, team2Count, team3Count):
         # Start Countdown
         for count in range(countDownSec, -1, -1):
             sleep(1)
@@ -330,6 +333,7 @@ class Executor(object):
                 break
 
             if (self.addPlayerState == AddPlayerState.ADVERTISE):
+                self.log('PLAYER - ADVERTISE GAME')
                 self.outputStream.send(self.addPlayerMessage)
                 sleep(1.5)
 
@@ -355,4 +359,5 @@ class Executor(object):
                 sleep(0.5)
 
         self.log("PLAYER - ADD PLAYER COMPLETE")
+        self.totemId = None 
 

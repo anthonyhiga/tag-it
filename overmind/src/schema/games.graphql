@@ -109,12 +109,22 @@ type GamePlayer {
   totemId: ID!
   avatarUrl: String!
   iconUrl: String!
+  health: Int
+  reloads: Int
+  shields: Int
+  megatags: Int
 }
 
 type GamePlayerList {
   id: ID!
   items: [GamePlayer]
 }
+
+type ReportCheckList {
+  id: ID!
+  items: [ReportCheckListItem]
+}
+
 
 type GamePlayerScore {
   id: ID!
@@ -139,12 +149,13 @@ type Query {
   game_settings(id: ID!): GameSettings
   game_players_list(id: ID!): GamePlayerList
   active_players_list: GamePlayerList
+  report_check_list: ReportCheckList
 }
 
 type Subscription {
   game_settings: GameSettings
   game_score(id: ID!): [GamePlayerScore]
-  report_check_list: [ReportCheckListItem]
+  report_check_list: ReportCheckList
   games_list: GameList
   active_games_list: GameList
   active_players_list: GamePlayerList
