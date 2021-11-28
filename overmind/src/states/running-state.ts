@@ -43,19 +43,30 @@ export class RunningState extends BaseState<{
   }
 
   onLeave() {
+    clearTimeout(this.gameTimer);
     arbiters.broadcastArbiterCommand({
       type: "RESET"
     });
   }
 
-  onGameEnd = () => {
+  onContinue = () => {
+    clearTimeout(this.gameTimer);
+    // Game Over
+    console.warn("GAME OVER");
+    this.props.onScoreGame();
+    return false;
+  };
+
+  onCancel = () => {
+    clearTimeout(this.gameTimer);
     manager.updateGameState(this.props.game.id, "COMPLETE");
   };
 
   model() {
     return {
       ...DEFAULT_SM_MODEL,
-      onGameEnd: this.onGameEnd
+      onCancel: this.onCancel,
+      onContinue: this.onContinue,
     };
   }
 }

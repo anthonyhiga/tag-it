@@ -31,7 +31,7 @@ export class SetupState extends BaseState<{
     this.updateSettings(this.props.initialSettings);
   }
 
-  onGameEnd = () => {
+  onCancel = () => {
     manager.updateGameState(this.props.game.id, "COMPLETE");
   };
 
@@ -51,7 +51,7 @@ export class SetupState extends BaseState<{
   model() {
     return {
       ...DEFAULT_SM_MODEL,
-      onGameEnd: this.onGameEnd,
+      onCancel: this.onCancel,
       onGameSettingsUpdate: this.onGameSettingsUpdate,
       onRegistrationStart: this.onRegistrationStart
     };

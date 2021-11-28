@@ -51,7 +51,7 @@ export class RegistrationState extends BaseState<{
     this.props.onStartGame();
   };
 
-  onGameEnd = () => {
+  onCancel = () => {
     manager.updateGameState(this.props.game.id, "COMPLETE");
   };
 
@@ -251,10 +251,10 @@ export class RegistrationState extends BaseState<{
   model() {
     return {
       ...DEFAULT_SM_MODEL,
+      onCancel: this.onCancel,
       onChannelUpdated: this.onChannelUpdated,
       onPlayerJoined: this.onPlayerJoined,
       onGameStart: this.onGameStart,
-      onGameEnd: this.onGameEnd
     };
   }
 }

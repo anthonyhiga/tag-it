@@ -29,14 +29,14 @@ export class ScoringState extends BaseState<{
     this.props.onComplete();
   };
 
-  onGameEnd = () => {
+  onCancel= () => {
     manager.updateGameState(this.props.game.id, "COMPLETE");
   };
 
   model() {
     return {
       ...DEFAULT_SM_MODEL,
-      onGameEnd: this.onGameEnd,
+      onCancel: this.onCancel,
       onFinalScore: this.onFinalScore
     };
   }

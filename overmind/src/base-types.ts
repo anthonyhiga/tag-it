@@ -133,6 +133,8 @@ export interface SMProps {
 }
 
 export interface SMModel {
+  onCancel: () => void;
+  onContinue: () => void;
   onGameEnd: () => void;
   onGameSettingsUpdate: (settings: GameSettings) => void;
   onRegistrationStart: () => void;
@@ -147,6 +149,8 @@ const DEFAULT_HANDLER = (name: string) => () => {
 };
 
 export const DEFAULT_SM_MODEL: SMModel = {
+  onCancel: DEFAULT_HANDLER("onCancel"),
+  onContinue: DEFAULT_HANDLER("onContinue"),
   onGameEnd: DEFAULT_HANDLER("onGameEnd"),
   onGameSettingsUpdate: DEFAULT_HANDLER("onGameSettingsUpdate"),
   onRegistrationStart: DEFAULT_HANDLER("onRegistrationStart"),

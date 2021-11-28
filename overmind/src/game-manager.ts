@@ -441,12 +441,24 @@ export class GameManager {
   cancelGameMutation = async (root: any, args: any) => {
     // This is coming from a client
     if (this.gameMachineCache[args.id]) {
+      this.gameMachineCache[args.id].model().onCancel();
       delete this.gameMachineCache[args.id];
       this.reportCheckListCache = {};
       console.log("CLEARING GAME MACHINE");
       console.log("CANCEL GAME: " + args.id);
     } else {
       console.warn("CANNOT CANCEL GAME: " + args.id);
+    }
+    return await Game.findByPk(args.id);
+  };
+
+  continueGameMutation = async (root: any, args: any) => {
+    // This is coming from a client
+    if (this.gameMachineCache[args.id]) {
+      this.gameMachineCache[args.id].model().onContinue();
+      console.log("CONTINUE GAME: " + args.id);
+    } else {
+      console.warn("CANNOT CONTINUE GAME: " + args.id);
     }
     return await Game.findByPk(args.id);
   };
@@ -641,6 +653,7 @@ export class GameManager {
         start_game: this.startGameMutation,
         end_game: this.endGameMutation,
         cancel_game: this.cancelGameMutation,
+        continue_game: this.continueGameMutation,
         start_registration: this.startRegistrationMutation,
         joined_player: this.joinedPlayerMutation
       },
