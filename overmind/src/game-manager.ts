@@ -363,7 +363,8 @@ export class GameManager {
 
   createGameMutation = async (root: any, args: any) => {
     // This is coming from a client
-    if (this.gameMachineBuilderCache[args.type] == null) {
+    const builder = this.gameMachineBuilderCache[args.type];
+    if (builder == null) {
       console.warn("NO MACHINE REGISTERED FOR TYPE: " + args.type);
       return {};
     }
@@ -371,10 +372,10 @@ export class GameManager {
     const game: Game = await Game.create({
       status: "SETUP",
       ltId: this.genGameId(),
-      name: args.name || "Game On!"
+      name: (args.name.length > 0 ? args.name : null) ?? builder.name ?? "Game On!"
     });
 
-    const machine = this.gameMachineBuilderCache[args.type].build(
+    const machine = builder.build(
       game,
       this.onUpdateGameSettings
     );

@@ -104,8 +104,8 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   reportTimeLimitSec: 12000,
   reportDelaySec: 1,
   countDownSec: 15,
-  gameLengthInMin: 1, // five minute game
-  health: 15,
+  gameLengthInMin: 5, // five minute game
+  health: 25,
   reloads: 99,
   shields: 99,
   megatags: 0,

@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 from mfrc522 import MFRC522
 from threading import Thread 
-from time import sleep, monotonic
+from time import sleep, monotonic, time
 
 class DeviceMFRC522:
   READER = None
@@ -90,25 +90,30 @@ class DeviceMFRC522:
 
 class RFID(object):
     def __init__(self, id, onId):
-        print("BOOTING - RFID")
+        print("RFID - BOOTING")
         self.reader = DeviceMFRC522(id)
         self.onId = onId
         self.lastId = 0
 
         id = self.reader.read_id_no_block()
-        print("SETTING ID: " + str(id))
+        print("RFID - SETTING ID: " + str(id))
         self.onId(id)
 
         self.start()
 
     def loop(self):
         try:
+            lasttime = time()
             while True:
+                if time() - lasttime > 60:
+                    self.lastId = 0
+
                 id = self.reader.read_id()
                 if id != self.lastId:
-                    print("UPDATING ID: " + str(id))
+                    print("RFID - UPDATING ID: " + str(id))
                     self.lastId = id
                     self.onId(id)
+                    lasttime = time()
 
                 sleep(0.25)
 
