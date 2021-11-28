@@ -25,9 +25,6 @@ on sending and receiving messages from the Lazer Tag Guns
 ## Referee
 The Referee is a web ui which allows administrators to start and manage games
 
-## Spectator 
-The Spectator is a web ui which allows a larger scale display of the game 
-
 ## TagIt
 The tag it library is the detailed GPIO messaging library.  It contains all of the IR protcols and GPIO interface code.
 
