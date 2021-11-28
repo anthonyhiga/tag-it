@@ -62,7 +62,7 @@ class Executor(object):
         self.inputStream.setSilent(busy)
 
     def log(self, message):
-        print(self.name + ':' + message);
+        print(self.name + ':' + str(message));
 
     def requestChannelUpdate(self):
         self.onChannelUpdate()
@@ -114,7 +114,7 @@ class Executor(object):
         None
 
     def onTag(self, team, player, strength): 
-        self.log("Tag - Received")
+        # self.log("Tag - Received")
         # Ignore for now
         None
 
@@ -263,6 +263,7 @@ class Executor(object):
             reloads, shields, megatags, totalTeams, options = []):
         # TODO: setup some kind of timeout on adding a player
         self.log("PLAYER - ADDING PLAYER FOR GAME: " + str(gameId) + " ID: " + str(id))
+        self.log(options)
 
         self.addPlayerDetail = {
                 'id': id,
@@ -292,10 +293,20 @@ class Executor(object):
             self.outputStream.send(message)
 
     def zoneLoop(self):
+        print("ZONE - CREATING ZONES")
+        print(self.zones)
+        lastGameActive = None
         time = 0
         while(True and len(self.zones) > 0):
           sleep(0.01);
           time = time + 10
+
+          if lastGameActive != self.gameActive:
+              lastGameActive = self.gameActive
+              if self.gameActive:
+                  print("ZONE - ACTIVATED")
+              else:
+                  print("ZONE - WAITING ON NEW GAME")
 
           if not self.gameActive:
               continue
@@ -318,6 +329,7 @@ class Executor(object):
                 self.outputStream.send(tag)
               elif type == "SUPPLY":
                 beacon = genZoneBeacon(zone['team'], "SUPPLY")
+                print(beacon)
                 self.outputStream.send(beacon)
               elif type == "CONTESTED":
                 beacon = genZoneBeacon(0, "CONTESTED")

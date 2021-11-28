@@ -104,8 +104,8 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   reportTimeLimitSec: 12000,
   reportDelaySec: 1,
   countDownSec: 15,
-  gameLengthInMin: 1, // five minute game
-  health: 15,
+  gameLengthInMin: 5, // five minute game
+  health: 25,
   reloads: 99,
   shields: 99,
   megatags: 0,
@@ -133,6 +133,8 @@ export interface SMProps {
 }
 
 export interface SMModel {
+  onCancel: () => void;
+  onContinue: () => void;
   onGameEnd: () => void;
   onGameSettingsUpdate: (settings: GameSettings) => void;
   onRegistrationStart: () => void;
@@ -147,6 +149,8 @@ const DEFAULT_HANDLER = (name: string) => () => {
 };
 
 export const DEFAULT_SM_MODEL: SMModel = {
+  onCancel: DEFAULT_HANDLER("onCancel"),
+  onContinue: DEFAULT_HANDLER("onContinue"),
   onGameEnd: DEFAULT_HANDLER("onGameEnd"),
   onGameSettingsUpdate: DEFAULT_HANDLER("onGameSettingsUpdate"),
   onRegistrationStart: DEFAULT_HANDLER("onRegistrationStart"),

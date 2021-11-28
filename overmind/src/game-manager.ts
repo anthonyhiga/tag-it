@@ -363,7 +363,8 @@ export class GameManager {
 
   createGameMutation = async (root: any, args: any) => {
     // This is coming from a client
-    if (this.gameMachineBuilderCache[args.type] == null) {
+    const builder = this.gameMachineBuilderCache[args.type];
+    if (builder == null) {
       console.warn("NO MACHINE REGISTERED FOR TYPE: " + args.type);
       return {};
     }
@@ -371,10 +372,10 @@ export class GameManager {
     const game: Game = await Game.create({
       status: "SETUP",
       ltId: this.genGameId(),
-      name: args.name || "Game On!"
+      name: (args.name.length > 0 ? args.name : null) ?? builder.name ?? "Game On!"
     });
 
-    const machine = this.gameMachineBuilderCache[args.type].build(
+    const machine = builder.build(
       game,
       this.onUpdateGameSettings
     );
@@ -440,12 +441,24 @@ export class GameManager {
   cancelGameMutation = async (root: any, args: any) => {
     // This is coming from a client
     if (this.gameMachineCache[args.id]) {
+      this.gameMachineCache[args.id].model().onCancel();
       delete this.gameMachineCache[args.id];
       this.reportCheckListCache = {};
       console.log("CLEARING GAME MACHINE");
       console.log("CANCEL GAME: " + args.id);
     } else {
       console.warn("CANNOT CANCEL GAME: " + args.id);
+    }
+    return await Game.findByPk(args.id);
+  };
+
+  continueGameMutation = async (root: any, args: any) => {
+    // This is coming from a client
+    if (this.gameMachineCache[args.id]) {
+      this.gameMachineCache[args.id].model().onContinue();
+      console.log("CONTINUE GAME: " + args.id);
+    } else {
+      console.warn("CANNOT CONTINUE GAME: " + args.id);
     }
     return await Game.findByPk(args.id);
   };
@@ -640,6 +653,7 @@ export class GameManager {
         start_game: this.startGameMutation,
         end_game: this.endGameMutation,
         cancel_game: this.cancelGameMutation,
+        continue_game: this.continueGameMutation,
         start_registration: this.startRegistrationMutation,
         joined_player: this.joinedPlayerMutation
       },

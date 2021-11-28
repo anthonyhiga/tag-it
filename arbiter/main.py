@@ -75,17 +75,22 @@ channels = {
     }),
 }
 
-#channels['main'].createZones([
-    #{
-    #    'delay': 500,
-    #    'type': 'SUPPLY',
-    #    'team': 0,
-    #},
-    #{
-    #    'delay': 500,
-    #    'type': 'CONTESTED',
-    #},
-#])
+channels['holster'].createZones([
+    {
+        'delay': 230,
+        'type': 'SUPPLY',
+        'team': 0,
+    },
+#    {
+#        'delay': 250,
+#        'type': 'CONTESTED',
+#        'team': 0,
+#    }
+#    {
+#        'delay': 500,
+#       'type': 'CONTESTED',
+#    },
+])
 
 totems = {
     'holster': RFID(0, channels['holster'].setTotemId)

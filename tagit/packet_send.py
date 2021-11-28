@@ -109,13 +109,10 @@ def genAnnounceGame(gameType, gameId, gameLengthInMin, health, reloads, shields,
     elif 'team_zones' in options:
         flag2 = flag2 | (1<<6) 
     elif 'unneutralize_supply_zones' in options:
-        # note this might be to convert a gun into a zone
         flag2 = flag2 | (1<<4) 
     elif 'refill_tags_supply_zones' in options:
-        # note this might be to convert a gun into a zone
         flag2 = flag2 | (1<<3) 
     elif 'hostile_zones' in options:
-        # note this might be to convert a gun into a zone
         flag2 = flag2 | (1<<2) 
 
     return MessageBuilder().packet(type)\

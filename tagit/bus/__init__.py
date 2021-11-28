@@ -806,12 +806,12 @@ class MessageOutputStream(object):
     def worker(self):
         global messageOutputStreamLock
         while True:
-            messageOutputStreamLock.acquire()
             try:
                 message = self.q.get()
+                self.q.task_done()
+                messageOutputStreamLock.acquire()
                 if message is None:
-                   self.q.task_done()
-                   break 
+                    continue
 
                 self.isBusy(True)
 
@@ -842,7 +842,6 @@ class MessageOutputStream(object):
 
                 self.pi.write(self.id, 0)
                 self.isBusy(False)
-                self.q.task_done()
 
             except:
                 print("Unexpected error:", sys.exc_info()[0])

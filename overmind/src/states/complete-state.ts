@@ -9,6 +9,10 @@ export class CompleteState extends BaseState<{
     manager.updateGameState(this.props.game.id, "AWARDS");
   }
 
+  onCancel = () => {
+    manager.updateGameState(this.props.game.id, "COMPLETE");
+  };
+
   onGameEnd = () => {
     manager.updateGameState(this.props.game.id, "COMPLETE");
   };
@@ -16,7 +20,8 @@ export class CompleteState extends BaseState<{
   model() {
     return {
       ...DEFAULT_SM_MODEL,
-      onGameEnd: this.onGameEnd
+      onCancel: this.onCancel,
+      onGameEnd: this.onGameEnd,
     };
   }
 }
