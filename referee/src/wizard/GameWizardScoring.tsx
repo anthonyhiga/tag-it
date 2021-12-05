@@ -7,6 +7,7 @@ import {
   AppBar,
   Avatar,
   Box,
+  Button,
   Grid,
   GridSize,
   LinearProgress,
@@ -19,9 +20,9 @@ import {
   Typography,
 } from "@material-ui/core";
 import { graphql } from "babel-plugin-relay/macro";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { useLazyLoadQuery, useSubscription } from "react-relay";
+import { useLazyLoadQuery, useMutation, useSubscription } from "react-relay";
 import GameWizardCancelButton from "./GameWizardCancelButton";
 import type {
   GameWizardScoringQuery,
@@ -32,6 +33,20 @@ type Props = { id: string };
 
 export default function GameWizardScoring({ id }: Props) {
   const { t } = useTranslation("referee");
+  const [commit] = useMutation(
+    graphql`
+      mutation GameWizardScoringContinueButtonMutation($id: ID!) {
+        continue_game(id: $id) {
+          id
+        }
+      }
+    `,
+  );
+
+  const onClick = useCallback(() => {
+    commit({ variables: { id } });
+  }, [id]);
+
   const data = useLazyLoadQuery<GameWizardScoringQuery>(
     graphql`
       query GameWizardScoringQuery {
@@ -89,8 +104,6 @@ export default function GameWizardScoring({ id }: Props) {
     [],
   );
   useSubscription(config);
-
-  const [clock, setClock] = useState(new Date().getTime());
 
   const items = data?.active_games_list?.items ?? [];
   const activeGame = items.length > 0 ? items[0] : null;
@@ -281,6 +294,10 @@ export default function GameWizardScoring({ id }: Props) {
       >
         <Toolbar>
           <Box flexGrow={1} />
+          <Button variant="contained" onClick={onClick}>
+            {t("Continue - No Guns Left to Score")}
+          </Button>
+          <Box sx={{ width: 10 }} />
           <GameWizardCancelButton id={id} />
         </Toolbar>
       </AppBar>

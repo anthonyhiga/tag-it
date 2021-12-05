@@ -10,16 +10,22 @@
     "@types/react": "^17.0.36",
     "@types/react-dom": "^17.0.11",
     "@types/react-relay": "^11.0.2",
+    "animate.css": "^4.1.1",
     "babel-plugin-relay": "^12.0.0",
     "get-graphql-schema": "^2.1.2",
     "graphql": "^15.0.0",
+    "radium": "^0.26.1",
     "react": "^17.0.2",
+    "react-animations": "^1.0.0",
     "react-dom": "^17.0.2",
     "react-i18next": "^11.14.3",
+    "react-media-player": "^0.7.9",
+    "react-player": "^2.9.0",
     "react-relay": "^12.0.0",
     "react-scripts": "^4.0.3",
     "relay-compiler": "^12.0.0",
     "relay-compiler-language-typescript": "14.0.0",
+    "spectacle": "^8.4.1",
     "subscriptions-transport-ws": "^0.11.0",
     "trim-right": "^2.0.0",
     "typeface-roboto": "1.1.13",
@@ -57,5 +63,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/radium": "^0.24.4",
+    "@types/react-animations": "^1.0.0"
   }
 }

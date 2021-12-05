@@ -29,21 +29,6 @@ import type {
 } from "./__generated__/GameWizardMainQuery.graphql";
 
 const useStyles = makeStyles((theme) => ({
-  root: {
-    width: "90%",
-  },
-  button: {
-    marginRight: theme.spacing(1),
-  },
-  instructions: {
-    marginTop: theme.spacing(1),
-    marginBottom: theme.spacing(1),
-  },
-  paper: {
-    padding: theme.spacing(2),
-    textAlign: "center",
-    color: theme.palette.text.secondary,
-  },
   container: {
     flex: 1,
   },

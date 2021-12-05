@@ -3,15 +3,18 @@
  *
  * License: Apache v2.0
  */
-import { AppBar, Toolbar } from "@material-ui/core";
+import { AppBar, Toolbar, Grid, Button } from "@material-ui/core";
 import Typography from "@material-ui/core/Typography";
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RelayEnvironmentProvider } from "react-relay";
 import "typeface-roboto";
 import environment from "./Environment";
 import GameWizardMain from "./wizard/GameWizardMain";
 import GameWizardError from "./wizard/GameWizardError";
+import SpectatorMain from "./spectator/SpectatorMain";
+import AppModeCard from "./AppModeCard";
+import { refereeImage, spectatorImage } from "./AppIcons";
 
 type ErrorProps = {};
 type ErrorState = { hasError: boolean; error: string };
@@ -43,15 +46,51 @@ class ErrorBoundary extends React.Component<ErrorProps, ErrorState> {
 
 function App() {
   const { t } = useTranslation("referee");
+  const [mode, setMode] = useState("");
+  const onClickBack = useCallback(() => setMode(""), [setMode]);
+  const onClickWizard = useCallback(() => setMode("WIZARD"), [setMode]);
+  const onClickSpectator = useCallback(() => setMode("SPECTATOR"), [setMode]);
   return (
     <RelayEnvironmentProvider environment={environment}>
-      <AppBar position="relative">
-        <Toolbar>
-          <Typography variant="h5">{t("Tag - IT Referee")}</Typography>
-        </Toolbar>
-      </AppBar>
+      {mode !== "SPECTATOR" && (
+        <AppBar position="relative">
+          <Toolbar>
+            <Typography variant="h5">{t("Tag - IT Referee")}</Typography>
+            {mode !== "" && <Button onClick={onClickBack}>Main</Button>}
+          </Toolbar>
+        </AppBar>
+      )}
       <ErrorBoundary>
-        <GameWizardMain />
+        {mode === "" && (
+          <>
+            <br />
+            <br />
+            <br />
+            <br />
+            <Grid container spacing={3} justify="space-around">
+              <Grid item>
+                <AppModeCard
+                  onClick={onClickWizard}
+                  name={t("Administrator")}
+                  description={t("Create and Officiate Games")}
+                  iconUrl={refereeImage}
+                />
+              </Grid>
+              <Grid item>
+                <AppModeCard
+                  onClick={onClickSpectator}
+                  name={t("Spectator")}
+                  description={t(
+                    "Display Game Status on a Larger Non-interactive Display",
+                  )}
+                  iconUrl={spectatorImage}
+                />
+              </Grid>
+            </Grid>
+          </>
+        )}
+        {mode === "WIZARD" && <GameWizardMain />}
+        {mode === "SPECTATOR" && <SpectatorMain />}
       </ErrorBoundary>
     </RelayEnvironmentProvider>
   );
