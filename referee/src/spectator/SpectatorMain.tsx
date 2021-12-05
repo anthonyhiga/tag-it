@@ -193,7 +193,7 @@ function SpectatorContent() {
         </audio>
       )}
       {activeStep === "AWARDS" && (
-        <audio autoPlay id="background">
+        <audio autoPlay loop id="background">
           <source src="music/The-Sound-Of-Rain.mp3" type="audio/mpeg" />
         </audio>
       )}
