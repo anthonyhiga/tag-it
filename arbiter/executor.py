@@ -1,7 +1,7 @@
 import sys, traceback, os
 from signal import pause 
 from time import sleep, monotonic
-from threading import Timer, Thread, Lock
+from threading import Timer, Thread
 from gpiozero import Button
 from enum import Enum
 
@@ -19,7 +19,11 @@ class AddPlayerState(Enum):
     FAILED = 4
     COMPLETE = 5
 
-
+class ReportedState(Enum):
+    ASSIGNING = 1
+    AVAILABLE = 2
+    REQUESTING = 3
+    REJECTING = 4
 
 ###############################################################################
 #
@@ -50,7 +54,7 @@ class Executor(object):
         self.inputStream.start()
 
         self.setPlayerState(AddPlayerState.COMPLETE)
-        self.addPlayerRequest = False
+        self.reportedState = ReportedState.AVAILABLE 
         self.addPlayerThread = None
 
         thread = Thread(target=self.reportMonitor)
@@ -67,12 +71,19 @@ class Executor(object):
     def requestChannelUpdate(self):
         self.onChannelUpdate()
 
-    def onChannelUpdate(self):
-        state = 'ASSIGNING'
-        if self.addPlayerState == AddPlayerState.COMPLETE:
+    def onChannelUpdate(self, reportedState = None):
+        if reportedState != None:
+            self.reportedState = reportedState
+        if self.reportedState == ReportedState.AVAILABLE:
             state = 'AVAILABLE'
-            if self.addPlayerRequest:
-                state = 'REQUESTING'
+        elif self.reportedState == ReportedState.ASSIGNING:
+            state = 'ASSIGNING'
+        elif self.reportedState == ReportedState.REJECTING:
+            state = 'REJECTING'
+        elif self.reportedState == ReportedState.REQUESTING:
+            state = 'REQUESTING'
+        else:
+            return
 
         self.handlers['onChannelUpdated'](self.name, self.type, self.totemId, state) 
 
@@ -82,39 +93,46 @@ class Executor(object):
 
     def stopAddPlayer(self):
         self.setPlayerState(AddPlayerState.COMPLETE)
-        self.addPlayerRequest = False 
         self.addPlayerDetail = None
         self.addPlayerMessage = None
         self.addPlayerFailedMessage = None
         self.addPlayerFailedCount = 6 
-        self.onChannelUpdate()
+        self.totemId = None
+        self.onChannelUpdate(ReportedState.AVAILABLE)
+
+    def rejectPlayer(self):
+        self.log("REJECTING TOTEM - " + str(self.totemId));
+        self.onChannelUpdate(ReportedState.REJECTING)
+        self.stopAddPlayer()
 
     def requestPlayer(self):
-        self.addPlayerRequest = True
-        self.onChannelUpdate()
+        self.onChannelUpdate(ReportedState.REQUESTING)
 
     def setTotemId(self, totemId):
+        if self.totemId != totemId and self.totemId != None:
+            self.rejectPlayer();
+
         self.log("TOTEM - SETTING TOTEM TO: " + str(totemId))
         self.totemId = totemId
         self.requestPlayer()
 
     def onStandardBeacon(self, team, tag): 
-        # self.log("Beacon - Standard Received")
+        self.log("Beacon - Standard Received")
         # Ignore for now
         None
 
     def onAdvancedBeacon(self, team, player, tag, shield, life): 
-        # self.log("Beacon - Advanced Received")
+        self.log("Beacon - Advanced Received")
         # Ignore for now
         None
 
     def onZoneBeacon(self, team, tag, flex): 
-        # self.log("Beacon - Zone Received")
+        self.log("Beacon - Zone Received")
         # Ignore for now
         None
 
     def onTag(self, team, player, strength): 
-        # self.log("Tag - Received")
+        self.log("Tag - Received")
         # Ignore for now
         None
 
@@ -122,9 +140,10 @@ class Executor(object):
         message = decodeMessage(raw)
         if (message != None):
             type = message['type']
-            self.log("GOT MESSAGE: " + type.name)
+            # self.log("GOT MESSAGE: " + type.name)
             if (type == MessageType.REQUEST_TO_JOIN and self.addPlayerState == AddPlayerState.ADVERTISE):
-                self.log("PLAYER - JOIN REQUEST RECEIVED FROM TAGGER: " + str(message['taggerId']))
+                self.log("PLAYER - JOIN REQUEST RECEIVED FROM TAGGER: " \
+                        + str(message['taggerId']) + " GAME: " + str(message['gameId']))
                 self.setPlayerState(AddPlayerState.ASSIGNED)
                 self.addPlayerDetail['taggerId'] = message['taggerId']
                 self.addPlayerFailedCount = 6 
@@ -138,7 +157,6 @@ class Executor(object):
 
                 self.log("PLAYER - SENDING [1] CONFIRM TAGGER: " + str(message['taggerId']))
                 self.outputStream.send(confirm)
-                sleep(0.5)
 
                 self.log("PLAYER - JOIN REQUEST PROCESSED: " + str(message['taggerId']) + " STATE: " + str(self.addPlayerState)) 
                 self.onChannelUpdate()
@@ -182,6 +200,7 @@ class Executor(object):
           teamQueryList = []
 
           for item in reportCheckList:
+            self.gameActive = False
             if item['status'] == 'COMPLETE':
               continue
 
@@ -244,9 +263,9 @@ class Executor(object):
 
     def startGame(self, gameId, countDownSec, team1Count, team2Count, team3Count):
         self.log("START - BEGINNING COUNTDOWN")
-        self.gameActive = True
 
         if not self.options['AllowGameStart']:
+            self.gameActive = True
             return
 
         self.log("BROADCASTING START")
@@ -274,7 +293,7 @@ class Executor(object):
         self.addPlayerMessage = genAnnounceGame(gameType, gameId, gameLengthInMin,
                 health, reloads, shields, megatags, totalTeams, options)
         self.setPlayerState(AddPlayerState.ADVERTISE)
-        self.onChannelUpdate()
+        self.onChannelUpdate(ReportedState.ASSIGNING)
 
         thread = Thread(target=self.playerLoop)
         thread.start()
@@ -291,6 +310,8 @@ class Executor(object):
             self.log("START - TIME TO START: " + str(count))
             message = genCountdown(gameId, count, team1Count, team2Count, team3Count) 
             self.outputStream.send(message)
+
+        self.gameActive = True
 
     def zoneLoop(self):
         print("ZONE - CREATING ZONES")
@@ -329,47 +350,44 @@ class Executor(object):
                 self.outputStream.send(tag)
               elif type == "SUPPLY":
                 beacon = genZoneBeacon(zone['team'], "SUPPLY")
-                print(beacon)
                 self.outputStream.send(beacon)
               elif type == "CONTESTED":
                 beacon = genZoneBeacon(0, "CONTESTED")
                 self.outputStream.send(beacon)
 
     def playerLoop(self):
-        self.log("PLAYER - SEARCHING FOR NEW PLAYER")
         id = monotonic()
+        self.log("PLAYER - " + str(id) + " SEARCHING FOR NEW PLAYER")
         self.addPlayerID = id 
         while(self.addPlayerState != AddPlayerState.COMPLETE):
             if (self.addPlayerID != id):
-                self.log('PLAYER - SEARCH REPLACED')
-                break
+                self.log('PLAYER - ' + str(id) + ' SEARCH REPLACED WITH ' + str(self.addPlayerID))
 
-            if (self.addPlayerState == AddPlayerState.ADVERTISE):
-                self.log('PLAYER - ADVERTISE GAME')
+            elif (self.addPlayerState == AddPlayerState.ADVERTISE):
+                self.log('PLAYER - ' + str(id) + ' ADVERTISE GAME ')
                 self.outputStream.send(self.addPlayerMessage)
                 sleep(1.5)
 
-            if (self.addPlayerState == AddPlayerState.ASSIGNED):
-                # wait 2 seconds for confirmation if none found, we
+            elif (self.addPlayerState == AddPlayerState.ASSIGNED):
+                # wait 4 seconds for confirmation if none found, we
                 # consider it failed and send out a failure 6 times
-                sleep(2)
+                sleep(4)
                 if (self.addPlayerState == AddPlayerState.ASSIGNED and self.addPlayerID == id):
                     self.setPlayerState(AddPlayerState.FAILED)
                     self.onChannelUpdate()
 
-            if (self.addPlayerState == AddPlayerState.FAILED):
-                self.log("PLAYER - ASSIGNMENT FAILURE: " + str(self.addPlayerFailedCount))
+            elif (self.addPlayerState == AddPlayerState.FAILED):
+                self.log("PLAYER - " + str(id) + " ASSIGNMENT FAILURE: " + str(self.addPlayerFailedCount))
                 self.outputStream.send(self.addPlayerFailedMessage)
                 self.addPlayerFailedCount = self.addPlayerFailedCount - 1
                 sleep(0.5)
 
                 if (self.addPlayerFailedCount <= 0 and self.addPlayerID == id):
-                    self.log("PLAYER - SEARCH RESTARTED FOR NEW PLAYER")
+                    self.log("PLAYER - " + str(id) + " SEARCH RESTARTED FOR NEW PLAYER")
                     self.setPlayerState(AddPlayerState.ADVERTISE)
                     self.onChannelUpdate()
             else:
                 sleep(0.5)
 
-        self.log("PLAYER - ADD PLAYER COMPLETE")
-        self.totemId = None 
+        self.log("PLAYER - " + str(id) + " ADD PLAYER COMPLETE")
 

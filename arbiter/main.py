@@ -55,16 +55,25 @@ def onTeamReport(gameId, report):
     })
 
 channels = {
-    'holster': Executor('holster', 'HOLSTER', 23, 24, {
+    'holster1': Executor('holster1', 'HOLSTER', 23, 22, {
         'onChannelUpdated': onChannelUpdated,
         'onPlayerAdded': onPlayerAdded,
         'onBasicReport': onBasicReport,
         'onTeamReport': onTeamReport,
     }, {
         # Allow this emitter to send game start messages
-        'AllowGameStart': True
+        'AllowGameStart': False
     }),
-    'main': Executor('main', 'AREA', 3, 4, {
+    'holster2': Executor('holster2', 'HOLSTER', 18, 17, {
+        'onChannelUpdated': onChannelUpdated,
+        'onPlayerAdded': onPlayerAdded,
+        'onBasicReport': onBasicReport,
+        'onTeamReport': onTeamReport,
+    }, {
+        # Allow this emitter to send game start messages
+        'AllowGameStart': False 
+    }),
+    'main': Executor('main', 'AREA', 13, 12, {
         'onChannelUpdated': onChannelUpdated,
         'onPlayerAdded': onPlayerAdded,
         'onBasicReport': onBasicReport,
@@ -75,25 +84,17 @@ channels = {
     }),
 }
 
-channels['holster'].createZones([
+channels['main'].createZones([
     {
         'delay': 230,
         'type': 'SUPPLY',
         'team': 0,
-    },
-#    {
-#        'delay': 250,
-#        'type': 'CONTESTED',
-#        'team': 0,
-#    }
-#    {
-#        'delay': 500,
-#       'type': 'CONTESTED',
-#    },
+    }
 ])
 
 totems = {
-    'holster': RFID(0, channels['holster'].setTotemId)
+    'holster1': RFID(0, channels['holster1'].setTotemId),
+    'holster2': RFID(1, channels['holster2'].setTotemId),
 }
 
 def onReconnected():

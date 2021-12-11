@@ -177,7 +177,7 @@ export class GameManager {
   };
 
   // Report Items
-  finalizeScore = () => {
+  finalizeScore = (id: number | null) => {
     if (this.finalizingScore) {
       return;
     }
@@ -211,7 +211,7 @@ export class GameManager {
       });
     }
 
-    let gameId: number | null = null;
+    let gameId: number | null = id;
     const finalScore: any[] = [];
     const created = [];
     for (const key in this.reportBasicScoreCache) {
@@ -244,11 +244,11 @@ export class GameManager {
     }
 
     Promise.all(created).then(() => {
-      console.info("FINISHED RECORDING SCORES");
+      console.info("FINISHED RECORDING SCORES: " + gameId);
       GamePlayerScore.findAll({
         where: { gameId: gameId }
       }).then((scores: any) => {
-        console.info("PUBLISHING SCORES");
+        console.info("PUBLISHING SCORES: " + gameId);
         this.pubsub.publish(GAME_SCORE_UPDATED, {
           game_id: gameId,
           game_score: scores
@@ -282,7 +282,7 @@ export class GameManager {
       }
     }
 
-    this.finalizeScore();
+    this.finalizeScore(null);
   };
 
   /*
@@ -292,7 +292,7 @@ export class GameManager {
   scoreGame = (reportItems: any[], timeLimitMs: number) => {
     this.scoringTimer = setTimeout(() => {
       console.warn("REACHED TIMEOUT, TALLYING SCORE ANYWAY");
-      this.finalizeScore();
+      this.finalizeScore(null);
     }, timeLimitMs);
 
     this.finalizingScore = false;

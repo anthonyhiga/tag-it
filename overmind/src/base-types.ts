@@ -101,9 +101,9 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
     registeredTotemsOnly: false,
     channel: {},
   },
-  reportTimeLimitSec: 12000,
+  reportTimeLimitSec: 120,
   reportDelaySec: 1,
-  countDownSec: 15,
+  countDownSec: 30,
   gameLengthInMin: 5, // five minute game
   health: 25,
   reloads: 99,

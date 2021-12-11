@@ -70,6 +70,20 @@ export class RegistrationState extends BaseState<{
     // NO-OP
   }
 
+  removeTeamAssignment(channel: Channel, player: Player, teamCount: number) {
+    const teams = this.props.teams;
+    for (var i = 0; i <= teamCount; i++) {
+      const team = teams[i];
+      const players = team.players;
+      const index = players.indexOf(player);
+      if (index > -1) {
+        console.log("REMOVING PLAYER FROM TEAM WITH TOTEM ID: " + channel.totemId);
+        players.splice(index, 1);
+        team.count = players.length;
+      }
+    }
+  }
+
   updateTeamAssignment(channel: Channel, player: Player, teamCount: number) {
     // If a player already has a team assigned, we use that
     const teams = this.props.teams;
@@ -105,12 +119,17 @@ export class RegistrationState extends BaseState<{
     this.updatePlayer(player, team, this.props.settings);
 
     players.push(player);
-    team.count++;
+    team.count = players.length;
     return true;
   }
 
   checkPolicyAndAssignPlayer(channel: Channel) {
     // We'll only react and assign if the channel isn't currently
+    if (channel.status === "REJECTING") {
+      console.warn("REJECTING CHANNEL: " + channel.arbiterId);
+      this.removePlayerFromChannel(channel);
+    }
+
     if (
       this.props.settings.assignment &&
       this.props.settings.assignment.requestToAssign
@@ -140,6 +159,60 @@ export class RegistrationState extends BaseState<{
         );
       }
     }
+  }
+
+  removePlayerFromChannel(channel: Channel) {
+    console.log(
+      "ARBITER ID: " + channel.arbiterId + " CHANNEL ACTIVE: " + channel.name
+    );
+
+    if (
+      this.props.settings.assignment &&
+      this.props.settings.assignment.requireTotem
+    ) {
+      if (channel.totemId == null) {
+        console.log("CHANNEL HAS NO TOTEM, IGNORING");
+        return;
+      }
+    }
+
+    let user = users.getUserByTotemId(channel.totemId);
+    if (
+      this.props.settings.assignment &&
+      this.props.settings.assignment.registeredTotemsOnly
+    ) {
+      if (user == null) {
+        console.log("UNABLE TO FIND PLAYER WITH TOTEM ID: " + channel.totemId);
+        return;
+      }
+    }
+
+    if (user == null) {
+      // If the user doesn't exist, then we just skip
+      console.log("UNABLE TO FIND USER WITH TOTEM ID: " + channel.totemId);
+      return;
+    }
+
+    const player = players.getPlayer(this.props.game.id, user.id);
+    if (player == null) {
+      console.log("UNABLE TO FIND PLAYER WITH TOTEM ID: " + channel.totemId);
+      return;
+    }
+
+    if (player.status === "ACTIVE") {
+      console.log("SKIPPING REMOVE ACTIVE PLAYER WITH TOTEM ID: " + channel.totemId);
+      return;
+    }
+
+    this.removeTeamAssignment(
+      channel,
+      player,
+      this.props.settings.totalTeams
+    );
+
+    console.log("SETTING TO IDLE PLAYER WITH TOTEM ID: " + channel.totemId);
+    players.updateStatus(player.id, "IDLE");
+    players.removePlayer(player);
   }
 
   assignPlayerToChannel(channel: Channel) {

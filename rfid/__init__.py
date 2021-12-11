@@ -105,7 +105,7 @@ class RFID(object):
         try:
             lasttime = time()
             while True:
-                if time() - lasttime > 60:
+                if time() - lasttime > (60 * 5):
                     self.lastId = 0
 
                 id = self.reader.read_id()

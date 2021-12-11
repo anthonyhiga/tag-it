@@ -132,6 +132,7 @@ def genAnnounceGame(gameType, gameId, gameLengthInMin, health, reloads, shields,
             .data()\
             .number8bit(flag2)\
             .checksum()\
+            .end()\
             .toMessage()
 
 
@@ -149,6 +150,7 @@ def genJoinConfirmed(gameId, taggerId, team, player):
             .data()\
             .number8bit((team << 3) + player)\
             .checksum()\
+            .end()\
             .toMessage()
 
 
@@ -191,6 +193,7 @@ def genRequestTagReport(gameId, team, player, team1Report, team2Report, team3Rep
             .data()\
             .number8bit(flags)\
             .checksum()\
+            .end()\
             .toMessage()
 
 

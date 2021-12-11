@@ -25,11 +25,18 @@ export class ScoringState extends BaseState<{
     manager.scoreGame(playerMap, this.props.settings.reportTimeLimitSec * 1000);
   }
 
+  onContinue = () => {
+    console.warn("SCORING - CONTINUE");
+    manager.finalizeScore(this.props.game.id);
+    return false;
+  }
+
   onFinalScore = () => {
+    console.warn("SCORING - GAME COMPLETE");
     this.props.onComplete();
   };
 
-  onCancel= () => {
+  onCancel = () => {
     manager.updateGameState(this.props.game.id, "COMPLETE");
   };
 
@@ -37,6 +44,7 @@ export class ScoringState extends BaseState<{
     return {
       ...DEFAULT_SM_MODEL,
       onCancel: this.onCancel,
+      onContinue: this.onContinue,
       onFinalScore: this.onFinalScore
     };
   }

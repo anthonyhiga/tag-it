@@ -111,6 +111,14 @@ class Players {
     );
   }
 
+  removePlayer(player: Player) {
+    if (this.data[player.id] != null) {
+      console.log("REMOVE PLAYER: " + player.id);
+      delete this.data[player.id];
+      this.runHandlers();
+    }
+  }
+
   createPlayer(gameId: number, userId: number): Player {
     const player = {
       id: this.genId(),

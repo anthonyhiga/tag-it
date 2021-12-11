@@ -20,7 +20,7 @@ GLOBAL_PI.wave_clear()
 #
 # Constants
 #
-WAIT_PARSE_DURATION = 48000 * 1.1 # ns
+WAIT_ON_BITS_PARSE_DURATION = 4000 * 0.000001 #ns
 
 #
 # Event Type
@@ -35,11 +35,11 @@ class EventType(Enum):
     BEACON = 8
     PAUSE = 9
     END = 10
-    FIRED = 11
 
 class InputDirection(Enum):
     RISE = 1
     VALLEY = 2
+    END = 3
 
 class InputBound(Enum):
     LOW = 1
@@ -60,18 +60,20 @@ def calculateBounds(duration, ignore, lowerMargin, upperMargin):
 #
 #  These numbers are derived off LTAP protocol
 EventBounds = {
+    InputDirection.END: {
+        # Nothing...
+    },
     InputDirection.RISE: {
-        EventType.ZERO: calculateBounds(1000, False, 500, 500),
-        EventType.ONE: calculateBounds(2000, False, 500, 500),
+        EventType.ZERO: calculateBounds(1000, False, 800, 200),
+        EventType.ONE: calculateBounds(2000, False, 800, 500),
         EventType.START: calculateBounds(3000, False, 500, 2000),
         EventType.BEACON: calculateBounds(6000, False, 1000, 1000),
     },
     InputDirection.VALLEY: {
-        EventType.DELIMITER: calculateBounds(2000, False, 1000, 1000),
-        EventType.PREAMBLE: calculateBounds(6000, False, 1000, 1000),
-        EventType.PAUSE: calculateBounds(25000, True, 0, 0),
-        EventType.END: calculateBounds(80000, True, 0, 0),
-        EventType.FIRED: calculateBounds(56000, True, 56000, 56000),
+        EventType.DELIMITER: calculateBounds(2000, False, 1800, 3000),
+        EventType.PREAMBLE: calculateBounds(6000, False, 1000, 3000),
+        EventType.PAUSE: calculateBounds(20000, True, 4000, 4000),
+        EventType.END: calculateBounds(75000, True, 4000, 4000),
     }
 }
 
@@ -86,7 +88,7 @@ EventBounds = {
 #
 
 class TimeTracker(object):
-    def __init__(self, onEdgeEvent, pi):
+    def __init__(self, onEdgeEvent, onEndEvent, pi):
         self.pi = pi
 
         self.lastEdgeS = monotonic()
@@ -94,32 +96,18 @@ class TimeTracker(object):
         self.lastEdgeValue = 3
 
         self.onEdgeEvent = onEdgeEvent
-        self.count = 0
+        self.onEndEvent = onEndEvent
         self.lastEventType = 3 
 
-    def onLight(self):
-        now = monotonic()
-        diffNS = (now - self.lastEdgeS) * 1000000
-
-        if (diffNS < 500):
-            return
-
-        self.onEdgeEvent(InputDirection.VALLEY, diffNS)
-        self.lastEdgeS = now
-        self.count = self.count + 1
-
-    def onDark(self):
-        now = monotonic()
-        diffNS = (now - self.lastEdgeS) * 1000000
-
-        if (diffNS < 500):
-            return
-
-        self.onEdgeEvent(InputDirection.RISE, diffNS)
-        self.lastEdgeS = now
+    def onEndEvent(self, tick):
+        self.onEndEvent()
 
     def onLightTick(self, tick):
         if (self.lastEdgeValue == InputDirection.VALLEY): 
+            return
+
+        if (tick < self.lastEdgeTick):
+            self.lastEdgeTick = tick 
             return
 
         diffNS = (tick - self.lastEdgeTick)
@@ -129,12 +117,15 @@ class TimeTracker(object):
 
         self.lastEdgeTick = tick 
         self.lastEdgeValue = InputDirection.VALLEY
-        self.count = self.count + 1
 
         self.onEdgeEvent(InputDirection.VALLEY, diffNS)
 
     def onDarkTick(self, tick):
         if (self.lastEdgeValue == InputDirection.RISE):
+            return
+
+        if (tick < self.lastEdgeTick):
+            self.lastEdgeTick = tick 
             return
 
         diffNS = (tick - self.lastEdgeTick)
@@ -162,27 +153,30 @@ class MessageInputStream(object):
         self.pi = GLOBAL_PI
         self.q = Queue() 
         self.silence = False
-        self.messageParserLock = Lock()
+        self.messageSequence = 0
+        self.firedEdgeEvent = False
 
-        self.timeTracker = TimeTracker(self.onEdgeEvent, self.pi)
+        self.timeTracker = TimeTracker(self.onEdgeEvent, self.onEndEvent, self.pi)
 
         # Used to Verify Checksum
         self.packetCheckTotal = 0
+        self.lastByte = 0 
         self.message = []
 
         self.t = Thread(target = self.worker)
         self.t.start()
+
+    def resetStream(self):
+        self.stream = []
+        self.messageSequence = self.messageSequence + 1
 
     def setSilent(self, value):
         #self.silence = value
         False
 
     def start(self):
-        #if (self.reader == None):
-        #    self.reader = Button(self.id)
-        #    self.reader.when_pressed = self.timeTracker.onLight
-        #    self.reader.when_released = self.timeTracker.onDark
         self.pi.callback(self.id, EITHER_EDGE, self.onChange) 
+        self.pi.set_watchdog(self.id, 3)
 
     def onChange(self, gpio, level, tick):
         if (gpio != self.id):
@@ -192,6 +186,8 @@ class MessageInputStream(object):
           self.timeTracker.onDarkTick(tick)
         elif (level == 0):
           self.timeTracker.onLightTick(tick)
+        elif (level == 2):
+          self.timeTracker.onEndEvent()
 
     def parseStart(self):
         self.index = 3
@@ -256,39 +252,46 @@ class MessageInputStream(object):
 
     def parsePacket(self):
         if (len(self.stream) < 19):
-            return
-
-        # All messages must start with START
-        if (self.stream[0]['event'] != EventType.START):
-            return
-
-        # All messages need PREAMBLE
-        if (self.stream[1]['event'] != EventType.PREAMBLE):
-            return
+            return False 
 
         # Message neither a BEACON or TAG
         if (self.stream[2]['event'] != EventType.START):
-            return
+            return True 
 
         self.parseStart()
 
         # we're looking at a data packet
         if (len(self.stream) == 19):
           data = self.parse8bit()
-          self.packetCheckTotal = self.packetCheckTotal + data 
-          self.message.append(data)
+
+          self.packetCheckTotal = self.packetCheckTotal + self.lastByte
+          self.message.append(self.lastByte)
+
+          self.lastByte = data
+
           # print("DATA - DATA %(data)d" % {"data": data})
           self.dumpStream('DATA_' + str(data))
-        else:
+
+          # We don't clear the stream just yet
+          return False 
+
+        elif(len(self.stream) == 21):
+          # We clear the handler since we got a packet which is complete
+
           first = self.parse1bit() # drop the extra bit
           if (first == 0):
             packetType = self.parse8bit()
-            self.packetCheckTotal = packetType 
-            self.message = [packetType]
+            self.packetCheckTotal = 0
+            self.lastByte = packetType 
+            self.message = []
             # print("PACKET - TYPE %(packetType)d" % {"packetType": packetType})
             self.dumpStream('PACKET_' + str(packetType))
           else:
             checkSum = int(self.parse8bit())
+
+            self.packetCheckTotal = self.packetCheckTotal + self.lastByte
+            self.message.append(self.lastByte)
+
             packetCheckSum = int(self.packetCheckTotal & 0xFF)
             # print("PACKET - CHECKSUM %(checkSum)d" % {"checkSum": checkSum})
             try:
@@ -303,28 +306,21 @@ class MessageInputStream(object):
                 print("Unexpected error:", sys.exc_info()[0])
                 traceback.print_tb(sys.exc_info()[2])
 
+            return True
 
 
     def parseTag(self):
         if (len(self.stream) < 17):
-            return
+            return False
 
         # if this is larger than 7 bits, we're dealing with a packet
         if (len(self.stream) > 17):
-            self.parsePacket()
-            return
-
-        # All messages must start with START
-        if (self.stream[0]['event'] != EventType.START):
-            return
-
-        # All messages need PREAMBLE
-        if (self.stream[1]['event'] != EventType.PREAMBLE):
-            return
+            return self.parsePacket()
 
         # Message neither a BEACON or TAG
         if (self.stream[2]['event'] != EventType.START):
-            return
+            # Signal we have a bad stream
+            return True
 
         self.parseStart()
         team = self.parse2bit()
@@ -336,25 +332,22 @@ class MessageInputStream(object):
         self.dumpStream('TAG')
         try:
             self.handlers['onTag'](team, player, strength)
+
         except:
             print("Unexpected error:", sys.exc_info()[0])
             traceback.print_tb(sys.exc_info()[2])
 
+        # Tag Parsing doesn't clear the stream
+        return False 
+
     def parseBeacon(self):
-        if (len(self.stream) < 13):
-            return
-
-        # All messages must start with START
-        if (self.stream[0]['event'] != EventType.START):
-            return
-
-        # All messages need PREAMBLE
-        if (self.stream[1]['event'] != EventType.PREAMBLE):
-            return
+        if (len(self.stream) != 21 and len(self.stream) != 13):
+            return False
 
         # Message neither a BEACON or TAG
         if (self.stream[2]['event'] != EventType.BEACON):
-            return
+            # Signal we have a bad stream
+            return True
 
         self.parseStart()
 
@@ -397,147 +390,131 @@ class MessageInputStream(object):
             print("Unexpected error:", sys.exc_info()[0])
             traceback.print_tb(sys.exc_info()[2])
 
+        return True
+
+    def hasInvalidHeader(self):
+        if (len(self.stream) <= 1):
+            return False 
+
+        # All messages must start with START
+        if (self.stream[0]['event'] != EventType.START):
+            return True
+
+        # All messages need PREAMBLE
+        if (self.stream[1]['event'] != EventType.PREAMBLE):
+            return True
+
+        return False
 
     def parseMessage(self):
-        self.messageParserLock.acquire()
-        # print("MESSAGE")
         try:
             if (len(self.stream) < 13):
-                return
+                return False
 
-            # All messages must start with START
-            if (self.stream[0]['event'] != EventType.START):
-                return
-
-            # All messages need PREAMBLE
-            if (self.stream[1]['event'] != EventType.PREAMBLE):
-                return
-
+            result = False
             # Message neither a BEACON or TAG
             if (self.stream[2]['event'] == EventType.BEACON):
-                self.parseBeacon()
+                return self.parseBeacon()
             else:
-                self.parseTag()
+                return self.parseTag()
 
-            self.stream = []
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
+            traceback.print_tb(sys.exc_info()[2])
 
-        finally:
-            self.messageParserLock.release()
-
-    def parseEnd(self):
-        if (len(self.stream) < 13):
+    def onEndEvent(self):
+        if (self.silence):
             return
 
-        #print("END")
-        self.parseMessage()
-
-    def parseDelayed(self):
-        if (len(self.stream) < 13):
-            return
-
-        #print("DELAYED")
-        self.parseMessage()
+        if self.firedEdgeEvent:
+            self.firedEdgeEvent = False
+            self.q.put({
+                "direction": InputDirection.END,
+                "durationNS": 0
+            })
 
     def onEdgeEvent(self, direction, durationNS):
         if (self.silence):
             return
 
+        self.firedEdgeEvent = True
         self.q.put({
             "direction": direction,
             "durationNS": durationNS
         })
 
     def processEvent(self, direction, durationNS):
+        # If the bus is silenced, we stop listening
         if (self.silence):
-            self.stream = []
+            self.resetStream()
             return
 
         eventType = EventType.UNKNOWN
         eventBounds = EventBounds[direction]
+        distance = 0
         for key in eventBounds:
             bounds = eventBounds[key]
             if bounds[InputBound.IGNORE]:
                 continue
 
             if bounds[InputBound.LOW] < durationNS and bounds[InputBound.HIGH] > durationNS:
+                distance = abs(durationNS - bounds[InputBound.MID])
                 eventType = key
 
-        # print(str(direction) + ":  " + str(durationNS) + " - " + str(eventType))
-        if (eventType == EventType.PREAMBLE and len(self.stream) == 0):
-            # if we just got a preamble, but missed the start, we can try to bootstrap
-            # this message
+        ######################################################################
+        # Special Event Handling
+        # print(str(direction) + ":  " + str(durationNS) + " - " + str(eventType) + " <--> " + str(distance))
+        #if distance > 100 and durationNS < 12000:
+        #    print(str(direction) + ":  " + str(durationNS) + " - " + str(eventType) + " <--> " + str(distance))
+
+        if (eventType == EventType.PREAMBLE):
+            # if we get a preamble, we assume we're starting all over 
+            self.resetStream()
             self.stream.append({
                 'event': EventType.START,
                 'duration': durationNS,
                 'direction': direction,
             })
+            self.stream.append({
+                'event': eventType,
+                'duration': durationNS,
+                'direction': direction,
+            })
+            return
 
-        if ((eventType == EventType.ZERO or eventType == EventType.ONE) and len(self.stream) == 0):
-            # if we are starting from scratch, a zero or one also works as a start
-            eventType = EventType.START
-
-        if ((eventType == EventType.ZERO or eventType == EventType.ONE) and len(self.stream) == 2):
-            # if we have gotten a valid preamble, then we error correct for the start
-            # because we can assume any kind of signal is the start
-            eventType = EventType.START
-
-        if (eventType == EventType.UNKNOWN):
-            # If the stream is 8 bits, we parse it
-            if (len(self.stream) >= 17):
-                # message is 8 bits, we we just need to wait a bit
-                self.parseEnd()
-            else:
-                #print("UNKNOWN -------------------- " + str(durationNS))
+        if (eventType == EventType.UNKNOWN and direction != InputDirection.END):
+            # If the stream less than 8 bits, we dump it
+            if (len(self.stream) < 17):
+                # print("UNKNOWN -------------------- " + str(durationNS) + " " + str(direction))
                 self.stream.append({
                     'event': eventType,
                     'duration': durationNS,
                     'direction': direction,
                 })
                 self.dumpStream("UNKNOWN")
-                self.stream = []
+                self.resetStream()
+                return
 
-        # We do header validation here
-        elif (eventType != EventType.START and len(self.stream) == 0):
-            # print("Throwing away bad start: " + str(eventType) + " : " + str(len(self.stream)))
-            self.stream.append({
-                'event': eventType,
-                'duration': durationNS,
-                'direction': direction,
-            })
-            self.dumpStream('BAD_START')
-            self.stream = []
-        elif (eventType != EventType.PREAMBLE and len(self.stream) == 1):
-            # print("Throwing away bad preamble: " + str(eventType) + " : " + str(len(self.stream)))
-            self.stream.append({
-                'event': eventType,
-                'duration': durationNS,
-                'direction': direction,
-            })
-            self.dumpStream('BAD_PREAMBLE')
-            self.stream = []
-        elif ((eventType != EventType.BEACON 
-            and eventType != EventType.START) 
-                and len(self.stream) == 2):
-            # print("Throwing away bad header: " + str(eventType) + " : " + str(len(self.stream)))
-            self.stream.append({
-                'event': eventType,
-                'duration': durationNS,
-                'direction': direction,
-            })
-            self.dumpStream('BAD_HEADER')
-            self.stream = []
-        elif (eventType == EventType.BEACON):
+        ######################################################################
+        # Pre Event Transforms
+        if ((eventType == EventType.ZERO or eventType == EventType.ONE) and len(self.stream) == 2):
+            # if we have gotten a valid preamble, then we error correct for the start
+            # because we can assume any kind of signal is the start
+            eventType = EventType.START
+
+        ######################################################################
+        # Stream Event Handling 
+        if (eventType == EventType.BEACON):
             self.stream.append({
                 'event': eventType,
                 'duration': durationNS,
                 'direction': direction,
             })
 
-            if (self.timer):
-              self.timer.cancel()
-            self.timer = Timer(WAIT_PARSE_DURATION * 0.000001, self.parseDelayed)
-            self.timer.start()
         elif (eventType == EventType.DELIMITER):
+            if len(self.stream) == 0:
+                return
+
             # This is an extra large DELIMITER, there is a good chance
             # this time was stolen from the previous value, we'll up the value
             # if the last value is a zero
@@ -550,8 +527,8 @@ class MessageInputStream(object):
                 'duration': durationNS,
                 'direction': direction,
             })
+
         elif (eventType == EventType.START
-                or eventType == EventType.PREAMBLE
                 or eventType == EventType.ZERO
                 or eventType == EventType.ONE):
             self.stream.append({
@@ -560,25 +537,30 @@ class MessageInputStream(object):
                 'direction': direction,
             })
 
-            if (len(self.stream) >= 21):
-                # message is long enough, trigger parse now
-                self.parseEnd()
-            if (len(self.stream) >= 19):
-                # message is 8 bits, we we just need to wait a bit
-                if (self.timer):
-                  self.timer.cancel()
-                self.timer = Timer((5000)* 0.000001, self.parseDelayed)
-                self.timer.start()
-        else:
+        elif (direction != InputDirection.END):
             # print("Throwing away bad data: " + str(eventType) + " : " + str(len(self.stream)))
+            # print("BAD -------------------- " + str(durationNS))
             self.stream.append({
                 'event': eventType,
                 'duration': durationNS,
                 'direction': direction,
             })
             self.dumpStream('BAD_DATA')
-            #self.parseEnd()
-            self.stream = []
+            self.resetStream()
+            return
+
+        ######################################################################
+        # Skip parsing if the message is short
+        if (len(self.stream) < 13):
+            return
+
+        ######################################################################
+        # Clear the Plate if the existing data is garbage 
+        if self.hasInvalidHeader():
+            return
+
+        if (direction == InputDirection.END):
+            self.parseMessage()
 
     #
     # Background Worker, we want to process the data
@@ -593,8 +575,6 @@ class MessageInputStream(object):
 
             self.processEvent(event['direction'], event['durationNS'])
             self.q.task_done()
-
-
 
 #############################################################################
 #
@@ -644,10 +624,6 @@ class MessageBuilder(object):
 
     def pause(self):
         self.content.append(EventType.PAUSE)
-        return self
-
-    def fired(self):
-        self.content.append(EventType.FIRED)
         return self
 
     def zero(self):
@@ -774,9 +750,8 @@ class MessageOutputStream(object):
         self.valley = {
                 2000: self.defineWave(self.carrierOff(2000)),
                 6000: self.defineWave(self.carrierOff(6000)),
-                25000: self.defineWave(self.carrierOff(25000)),
-                56000: self.defineWave(self.carrierOff(56000)),
-                80000: self.defineWave(self.carrierOff(80000)),
+                20000: self.defineWave(self.carrierOff(20000)),
+                75000: self.defineWave(self.carrierOff(75000)),
         }
 
     def destroy(self):
@@ -784,7 +759,10 @@ class MessageOutputStream(object):
 
     def carrierOff(self, durationNS):
         flash = []
-        flash.append(pulse(0, 1<<self.id, int(durationNS/2)))
+        flash.append(pulse(0, 1<<self.id, int(durationNS/2/4)))
+        flash.append(pulse(0, 1<<self.id, int(durationNS/2/4)))
+        flash.append(pulse(0, 1<<self.id, int(durationNS/2/4)))
+        flash.append(pulse(0, 1<<self.id, int(durationNS/2/4)))
         return flash;
 
     def carrier38khz(self, durationNS):
@@ -821,8 +799,6 @@ class MessageOutputStream(object):
                 # without python performance getting in the way
                 #
                 wave = []
-                totalDuration = 0
-
                 for item in message:
                     duration = 0
                     if (item in EventBounds[InputDirection.RISE]): 
@@ -835,10 +811,9 @@ class MessageOutputStream(object):
                         part = self.valley[duration]
                         wave.append(part)
 
-                    totalDuration = totalDuration + duration
-
                 self.pi.wave_chain(wave)
-                sleep(totalDuration / 1000000)
+                while(self.pi.wave_tx_busy()):
+                    sleep(0.0001)
 
                 self.pi.write(self.id, 0)
                 self.isBusy(False)
