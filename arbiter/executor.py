@@ -117,22 +117,22 @@ class Executor(object):
         self.requestPlayer()
 
     def onStandardBeacon(self, team, tag): 
-        self.log("Beacon - Standard Received")
+        # self.log("Beacon - Standard Received")
         # Ignore for now
         None
 
     def onAdvancedBeacon(self, team, player, tag, shield, life): 
-        self.log("Beacon - Advanced Received")
+        # self.log("Beacon - Advanced Received")
         # Ignore for now
         None
 
     def onZoneBeacon(self, team, tag, flex): 
-        self.log("Beacon - Zone Received")
+        # self.log("Beacon - Zone Received")
         # Ignore for now
         None
 
     def onTag(self, team, player, strength): 
-        self.log("Tag - Received")
+        # self.log("Tag - Received")
         # Ignore for now
         None
 
