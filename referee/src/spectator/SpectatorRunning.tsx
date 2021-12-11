@@ -103,7 +103,7 @@ export default function SpectatorRunning({ id }: Props) {
           <source src="music/heavy-beam-weapon-7052.mp3" type="audio/mpeg" />
         </audio>
       )}
-      {!isCountingDown && timeLeft < 30000 && (
+      {!isCountingDown && timeLeft < 15000 && (
         <audio autoPlay loop>
           <source src="music/nuclear-alarm-6997.mp3" type="audio/mpeg" />
         </audio>

@@ -38,13 +38,13 @@ const styles: any = {
     transition: "width .5s, height 0.5s",
   },
   team1: {
-    backgroundColor: "rgba(255, 0, 0, 0.2)",
+    backgroundColor: "rgba(252, 3, 140, 0.2)",
   },
   team2: {
-    backgroundColor: "rgba(0, 0, 255, 0.2)",
+    backgroundColor: "rgba(98, 3, 252, 0.2)",
   },
   team3: {
-    backgroundColor: "rgba(50, 50, 50, 0.2)",
+    backgroundColor: "rgba(252, 157, 3, 0.2)",
   },
   solo: {
     backgroundColor: "rgba(50, 50, 50, 0.2)",

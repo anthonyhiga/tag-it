@@ -89,7 +89,7 @@ const styles: any = {
 
 const teamStyle: any = {
   1: {
-    backgroundColor: "rgba(255, 0, 0, 0.2)",
+    backgroundColor: "rgba(252, 3, 140, 0.2)",
     borderRadius: "20px",
     margin: "20px",
     padding: "20px",
@@ -98,7 +98,7 @@ const teamStyle: any = {
     borderWidth: "2px",
   },
   2: {
-    backgroundColor: "rgba(0, 0, 255, 0.2)",
+    backgroundColor: "rgba(98, 3, 252, 0.2)",
     borderRadius: "20px",
     margin: "20px",
     padding: "20px",
@@ -107,7 +107,7 @@ const teamStyle: any = {
     borderWidth: "2px",
   },
   3: {
-    backgroundColor: "rgba(50, 50, 50, 0.2)",
+    backgroundColor: "rgba(252, 157, 3, 0.2)",
     borderRadius: "20px",
     margin: "20px",
     padding: "20px",
