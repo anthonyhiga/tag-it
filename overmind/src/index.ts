@@ -45,6 +45,8 @@ const server = new ApolloServer({
 
 server.applyMiddleware({ app });
 
+app.use('/', express.static('../../../referee/build'));
+
 const httpServer = http.createServer(app);
 server.installSubscriptionHandlers(httpServer);
 
