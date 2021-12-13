@@ -8,7 +8,7 @@ import {
 
 import { SubscriptionClient } from "subscriptions-transport-ws";
 
-const HOST_NAME = "localhost:4000";
+const HOST_NAME = window.location.hostname + ":4000";
 const GRAPHQL_ENDPOINT = `${HOST_NAME}/graphql`;
 
 const fetchQuery = (operation, variables) => {

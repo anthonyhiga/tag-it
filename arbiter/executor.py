@@ -362,6 +362,7 @@ class Executor(object):
         while(self.addPlayerState != AddPlayerState.COMPLETE):
             if (self.addPlayerID != id):
                 self.log('PLAYER - ' + str(id) + ' SEARCH REPLACED WITH ' + str(self.addPlayerID))
+                sleep(1.5)
 
             elif (self.addPlayerState == AddPlayerState.ADVERTISE):
                 self.log('PLAYER - ' + str(id) + ' ADVERTISE GAME ')

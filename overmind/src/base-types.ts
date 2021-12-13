@@ -101,7 +101,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
     registeredTotemsOnly: false,
     channel: {},
   },
-  reportTimeLimitSec: 120,
+  reportTimeLimitSec: 600,
   reportDelaySec: 1,
   countDownSec: 30,
   gameLengthInMin: 5, // five minute game
