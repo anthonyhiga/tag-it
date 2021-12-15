@@ -318,7 +318,7 @@ class Executor(object):
         print(self.zones)
         lastGameActive = None
         time = 0
-        while(True and len(self.zones) > 0):
+        while(len(self.zones) > 0):
           sleep(0.01);
           time = time + 10
 
@@ -330,6 +330,7 @@ class Executor(object):
                   print("ZONE - WAITING ON NEW GAME")
 
           if not self.gameActive:
+              sleep(10)
               continue
 
           for zone in self.zones:

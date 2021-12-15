@@ -22,6 +22,8 @@ class DeviceMFRC522:
     id = self.read_id_no_block()
     while not id:
       id = self.read_id_no_block()
+      sleep(1)
+
     return id
 
   def read_id_no_block(self):
@@ -105,17 +107,17 @@ class RFID(object):
         try:
             lasttime = time()
             while True:
-                if time() - lasttime > (60 * 5):
+                if time() - lasttime > (60 * 3):
                     self.lastId = 0
 
-                id = self.reader.read_id()
-                if id != self.lastId:
+                id = self.reader.read_id_no_block()
+                if id != self.lastId and not id is None:
                     print("RFID - UPDATING ID: " + str(id))
                     self.lastId = id
                     self.onId(id)
                     lasttime = time()
 
-                sleep(0.25)
+                sleep(5)
 
         finally:
             GPIO.cleanup()
