@@ -4,6 +4,7 @@ import RPi.GPIO as GPIO
 from mfrc522 import SimpleMFRC522
 from time import sleep
 
+import rfid
 
 reader = SimpleMFRC522()
 
